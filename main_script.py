@@ -1,12 +1,7 @@
-#This version snaps the selector based on the buttons
+# SPDX-FileCopyrightText: 2024 Shape Keys Widget Authors
+# SPDX-License-Identifier: GPL-3.0-or-later
 
-bl_info = {
-	"name": "Shape Key Selector",
-	"version": (1, 0, 20),
-	"blender": (3, 6, 2),
-	"location": "View3D > Properties > Shape Key Selector",
-	"category": "Object",
-}
+#This version snaps the selector based on the buttons
 
 import bpy
 import os
