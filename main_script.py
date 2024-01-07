@@ -250,7 +250,7 @@ class SKS_panel:
 
 #The primary panel, no parents
 class MainPanel(SKS_panel, bpy.types.Panel):
-    bl_idname = "_PT_Main_Panel"
+    bl_idname = "VIEW3D_PT_Main_Panel"
     bl_label = "Shape Key Selector"
 
     def draw(self, context):
@@ -258,7 +258,8 @@ class MainPanel(SKS_panel, bpy.types.Panel):
 
 # Sub-panel only used as a grouping of child panels
 class RequiredPanel(SKS_panel, bpy.types.Panel):
-    bl_parent_id = "_PT_Main_Panel"
+    bl_parent_id = "VIEW3D_PT_Main_Panel"
+    bl_idname = "VIEW3D_PT_RequiredPanel"
     bl_label = "Required Fields"
     bl_options = {'HIDE_HEADER'}
 
@@ -296,9 +297,9 @@ class RequiredPanel(SKS_panel, bpy.types.Panel):
 
 # Sub-panel only used as a grouping of child panels
 class ManualPanel1(SKS_panel, bpy.types.Panel):
-    bl_parent_id = "_PT_Main_Panel"
+    bl_parent_id = "VIEW3D_PT_Main_Panel"
     bl_label = "Setup"
-    bl_idname = "_PT_Manual_Panel1"
+    bl_idname = "VIEW3D_PT_Manual_Panel1"
     bl_options = {"HEADER_LAYOUT_EXPAND"}
 
     def draw(self, context):
@@ -311,9 +312,9 @@ class ManualPanel1(SKS_panel, bpy.types.Panel):
         #subpanel only used as a grouping of child panels
 
 class ManualPanel2(SKS_panel, bpy.types.Panel):
-    bl_parent_id = "_PT_Manual_Panel1"
+    bl_parent_id = "VIEW3D_PT_Manual_Panel1"
     bl_label = "Set Up Shape Key Images"
-    bl_idname = "_PT_Manual_Panel2"
+    bl_idname = "VIEW3D_PT_Manual_Panel2"
     bl_options = {"HEADER_LAYOUT_EXPAND"}
     bl_order =1
 
@@ -342,7 +343,8 @@ class ManualPanel2(SKS_panel, bpy.types.Panel):
 
 #child panel, without showing title
 class ExtrasPanel(SKS_panel, bpy.types.Panel):
-    bl_parent_id = "_PT_Main_Panel"
+    bl_parent_id = "VIEW3D_PT_Main_Panel"
+    bl_idname = "VIEW3D_PT_ExtrasPanel"
     bl_label = "Extras"
     bl_options = {"HEADER_LAYOUT_EXPAND"}
 
@@ -369,7 +371,8 @@ class ExtrasPanel(SKS_panel, bpy.types.Panel):
 
 
 class OptionalPanel(SKS_panel, bpy.types.Panel):
-    bl_parent_id = "_PT_Manual_Panel1"
+    bl_parent_id = "VIEW3D_PT_Manual_Panel1"
+    bl_idname = "VIEW3D_PT_OptionalPanel"
     bl_label = "Optional Settings"
     #bl_options = {'HIDE_HEADER'}
 
