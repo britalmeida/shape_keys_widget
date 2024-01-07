@@ -83,7 +83,6 @@ def obj_init(scene):
             '''else:
                 print("Selected object is not a text object")'''
 
-bpy.app.handlers.depsgraph_update_post.append(obj_init)
 
 def update_category(self, context):
 
@@ -242,62 +241,6 @@ def image_path_updated_callback(self, context):
         # Update the scene property with the absolute path
         context.scene.image_path = absolute_path
 
-
-# Add properties to store the image file path, character model, shape key, and expression selector
-bpy.types.Scene.image_path = bpy.props.StringProperty(
-    name="Image Path",
-    subtype='DIR_PATH',
-    description = "Choose the folder where you want your images to be saved",
-    update=image_path_updated_callback,
-)
-bpy.types.Scene.selected_character = bpy.props.StringProperty(
-    name="Model",
-    description="Select your character object"
-)
-bpy.types.Scene.selected_shape_key = bpy.props.EnumProperty(
-    name="Shape Key",
-    items=[],  # Will be populated dynamically
-)
-bpy.types.Scene.selected_expression_selector = bpy.props.StringProperty(
-    name="Picker Object",
-)
-# Define a property to store the category name
-bpy.types.Scene.category_name = bpy.props.StringProperty(
-    name="Category Name",
-    description="Enter the category name for expressions i.e. Mouth, Eyes, Eyebrows etc",
-    default="Enter the category name",  # Set a default value if needed
-    update=update_category,
-)
-# Define a property to store error messages
-bpy.types.Scene.error_message = bpy.props.StringProperty(
-    name="Error Message",
-    description="Error message for the user",
-    default="",
-)
-# Define a property to store the error type
-bpy.types.Scene.error_type = bpy.props.EnumProperty(
-    name="Error Type",
-    items=[
-        ("ERROR", "Error", "Error message"),
-        ("INFO", "Info", "Info message"),
-        ("DEFAULT", "Default", "Default message"),
-    ],
-    default="ERROR",  # Set the default error type
-)
-# Register the update callback
-bpy.types.Scene.snapping_str = bpy.props.EnumProperty(
-    items= [
-    ("OPTION1", "Off", "Turn Selector Snapping off"),
-    ("OPTION2", "1/4", "Snap to 1/4 increments"),
-    ("OPTION3", "1/3", "Snap to 1/3 increments"),
-    ("OPTION4", "1/2", "Snap to 1/2 increments"),
-    ("OPTION5", "1", "Snap to 1 unit increments"),
-    ],
-    name="Button Array Property",
-    description="Selector Snapping",
-    default="OPTION1",
-    update=snapping_options,  # This will execute the function when the property changes
-)
 
 class SKS_panel:
     bl_space_type = "VIEW_3D"
@@ -2545,6 +2488,62 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
+    # Add properties to store the image file path, character model, shape key, and expression selector
+    bpy.types.Scene.image_path = bpy.props.StringProperty(
+        name="Image Path",
+        subtype='DIR_PATH',
+        description = "Choose the folder where you want your images to be saved",
+        update=image_path_updated_callback,
+    )
+    bpy.types.Scene.selected_character = bpy.props.StringProperty(
+        name="Model",
+        description="Select your character object"
+    )
+    bpy.types.Scene.selected_shape_key = bpy.props.EnumProperty(
+        name="Shape Key",
+        items=[],  # Will be populated dynamically
+    )
+    bpy.types.Scene.selected_expression_selector = bpy.props.StringProperty(
+        name="Picker Object",
+    )
+    # Define a property to store the category name
+    bpy.types.Scene.category_name = bpy.props.StringProperty(
+        name="Category Name",
+        description="Enter the category name for expressions i.e. Mouth, Eyes, Eyebrows etc",
+        default="Enter the category name",  # Set a default value if needed
+        update=update_category,
+    )
+    # Define a property to store error messages
+    bpy.types.Scene.error_message = bpy.props.StringProperty(
+        name="Error Message",
+        description="Error message for the user",
+        default="",
+    )
+    # Define a property to store the error type
+    bpy.types.Scene.error_type = bpy.props.EnumProperty(
+        name="Error Type",
+        items=[
+            ("ERROR", "Error", "Error message"),
+            ("INFO", "Info", "Info message"),
+            ("DEFAULT", "Default", "Default message"),
+        ],
+        default="ERROR",  # Set the default error type
+    )
+    # Register the update callback
+    bpy.types.Scene.snapping_str = bpy.props.EnumProperty(
+        items= [
+        ("OPTION1", "Off", "Turn Selector Snapping off"),
+        ("OPTION2", "1/4", "Snap to 1/4 increments"),
+        ("OPTION3", "1/3", "Snap to 1/3 increments"),
+        ("OPTION4", "1/2", "Snap to 1/2 increments"),
+        ("OPTION5", "1", "Snap to 1 unit increments"),
+        ],
+        name="Button Array Property",
+        description="Selector Snapping",
+        default="OPTION1",
+        update=snapping_options,  # This will execute the function when the property changes
+    )
+
     bpy.types.Object.before_loc = bpy.props.FloatVectorProperty(name="before_loc",
                                                                 subtype="TRANSLATION")
     #The prop function now updates
@@ -2560,12 +2559,29 @@ def register():
         items=RequiredPanel.populate_shape_key_items,
     )
 
+    bpy.app.handlers.depsgraph_update_post.append(obj_init)
+
+
 def unregister():
+
+    bpy.app.handlers.depsgraph_update_post.remove(obj_init)
+
+    del bpy.types.Scene.selected_shape_key
+    del bpy.types.Scene.prop
+    del bpy.types.Object.before_loc
+    del bpy.types.Scene.snapping_str
+    del bpy.types.Scene.error_type
+    del bpy.types.Scene.error_message
+    del bpy.types.Scene.prop
+    del bpy.types.Scene.category_name
+    del bpy.types.Scene.selected_expression_selector
+    del bpy.types.Scene.selected_shape_key
+    del bpy.types.Scene.selected_character
+    del bpy.types.Scene.image_path
+
     for cls in classes:
         bpy.utils.unregister_class(cls)
 
-
-    del bpy.types.Object.before_loc
 
 if __name__ == "__main__":
     register()
