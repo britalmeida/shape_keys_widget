@@ -2499,10 +2499,6 @@ def register():
         name="Model",
         description="Select your character object"
     )
-    bpy.types.Scene.selected_shape_key = bpy.props.EnumProperty(
-        name="Shape Key",
-        items=[],  # Will be populated dynamically
-    )
     bpy.types.Scene.selected_expression_selector = bpy.props.StringProperty(
         name="Picker Object",
     )
@@ -2572,10 +2568,8 @@ def unregister():
     del bpy.types.Scene.snapping_str
     del bpy.types.Scene.error_type
     del bpy.types.Scene.error_message
-    del bpy.types.Scene.prop
     del bpy.types.Scene.category_name
     del bpy.types.Scene.selected_expression_selector
-    del bpy.types.Scene.selected_shape_key
     del bpy.types.Scene.selected_character
     del bpy.types.Scene.image_path
 
