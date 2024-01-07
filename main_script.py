@@ -110,8 +110,8 @@ def update_category(self, context):
 		# Prepend "OPTION" to the integer value
 		snapping_option_str = f"OPTION{snapping_option}"
 
-		# Set the button_array_property
-		context.scene.button_array_property = snapping_option_str
+		# Set the snapping_str
+		context.scene.snapping_str = snapping_option_str
 
 	else:
 		print(f"Text object not found for category: {category_name}")
@@ -137,7 +137,6 @@ def snapping_options(self, context):
 			selector_array.append(obj)
 			text_array.append(obj.parent)
 
-
 	print(text_array)
 
 	# Loop through all text objects
@@ -150,14 +149,12 @@ def snapping_options(self, context):
 
 	print(selector_array)
 
-
-
 	for text_obj in text_array:
 		# Get the current snapping increment from the text object
 		current_snapping_increment = text_obj.get("snapping_increment", 0)
 
 		# Insert keyframes for all shape keys and selectors
-		if self.button_array_property == "OPTION1" and current_snapping_increment != 1:
+		if self.snapping_str == "OPTION1" and current_snapping_increment != 1:
 
 			if text_obj:
 				print("Setting snapping to Off")
@@ -167,7 +164,7 @@ def snapping_options(self, context):
 				driver_snap_location(selector, 0, 'LOC_X', 'var')
 				driver_snap_location(selector, 1, 'LOC_Y', 'var')
 
-		elif self.button_array_property == "OPTION2" and current_snapping_increment != 2:
+		elif self.snapping_str == "OPTION2" and current_snapping_increment != 2:
 
 			for selector in selector_array:
 				driver_snap_location(selector, 0, 'LOC_X', 'round(var*40)/40')
@@ -177,7 +174,7 @@ def snapping_options(self, context):
 				print("Setting snapping to 1/4")
 				text_obj["snapping_increment"] = 2  # Set the custom property value
 
-		elif self.button_array_property == "OPTION3" and current_snapping_increment != 3:
+		elif self.snapping_str == "OPTION3" and current_snapping_increment != 3:
 
 			for selector in selector_array:
 				driver_snap_location(selector, 0, 'LOC_X', 'round(var*30)/30')
@@ -187,7 +184,7 @@ def snapping_options(self, context):
 				print("Setting snapping to 1/3")
 				text_obj["snapping_increment"] = 3  # Set the custom property value
 
-		elif self.button_array_property == "OPTION4" and current_snapping_increment != 4:
+		elif self.snapping_str == "OPTION4" and current_snapping_increment != 4:
 
 			for selector in selector_array:
 				driver_snap_location(selector, 0, 'LOC_X', 'round(var*20)/20')
@@ -197,7 +194,7 @@ def snapping_options(self, context):
 				print("Setting snapping to 1/2")
 				text_obj["snapping_increment"] = 4  # Set the custom property value
 
-		elif self.button_array_property == "OPTION5" and current_snapping_increment != 5:
+		elif self.snapping_str == "OPTION5" and current_snapping_increment != 5:
 
 			for selector in selector_array:
 				driver_snap_location(selector, 0, 'LOC_X', 'round(var*10)/10')
@@ -286,7 +283,7 @@ bpy.types.Scene.error_type = bpy.props.EnumProperty(
 	default="ERROR",  # Set the default error type
 )
 # Register the update callback
-bpy.types.Scene.button_array_property = bpy.props.EnumProperty(
+bpy.types.Scene.snapping_str = bpy.props.EnumProperty(
 	items= [
 	("OPTION1", "Off", "Turn Selector Snapping off"),
 	("OPTION2", "1/4", "Snap to 1/4 increments"),
@@ -327,8 +324,6 @@ class RequiredPanel(SKS_panel, bpy.types.Panel):
 		layout.prop(context.scene, "image_path", text="Folder Path")
 
 		layout.prop(context.scene, "prop")
-
-
 
 		# Inside the box for "Manually Add Expressions"
 		layout.prop(context.scene, "category_name", text="Category Name")
@@ -412,7 +407,7 @@ class ExtrasPanel(SKS_panel, bpy.types.Panel):
 
 		layout.label(text = "Selector Snapping:")
 		# Add the EnumProperty (button array) to the panel
-		layout.prop(context.scene, "button_array_property", expand=True)
+		layout.prop(context.scene, "snapping_str", expand=True)
 
 		layout.separator()
 
@@ -1416,20 +1411,6 @@ class AddNeutralOperator(bpy.types.Operator):
 		# Get the active scene
 		scene = bpy.context.scene
 
-		# Check if the scene has a gravity property because every scene has a gravity atttribute that we can access
-		if hasattr(scene, "gravity"):
-			# Add a driver to the gravity property
-			driver = scene.driver_add("gravity", 0)
-
-			# Delete the driver
-			scene.driver_remove("gravity", 0)
-
-		result = user_error_check(self, context)
-		if result == {'CANCELLED'}:
-			return {'CANCELLED'}  # Operator is cancelled due to errors
-
-
-
 		# Access the selected image path
 		image_path = context.scene.image_path
 		# Specify the directory containing PNG files
@@ -1490,9 +1471,6 @@ class AddNeutralOperator(bpy.types.Operator):
 				data_path = f'["{key.name}"]'
 				character_obj.data.driver_remove(data_path)
 
-				#Maybe also remove all of the custom properties on this object as well
-				# Remove all custom properties from the object
-
 		# Define the category name
 		category_name = bpy.context.scene.category_name
 
@@ -1524,9 +1502,6 @@ class AddNeutralOperator(bpy.types.Operator):
 			bpy.context.scene.collection.children.link(selectors_collection)
 
 
-
-
-
 		# Parent the plane to the empty (hopefully this method will work nicer than setting the parent manually)
 		set_object_parent(plane_obj, text_obj)
 
@@ -1554,33 +1529,16 @@ class AddNeutralOperator(bpy.types.Operator):
 			left_selector_file_path = os.path.join(script_directory, "Lselector.json")
 			right_selector_file_path = os.path.join(script_directory, "Rselector.json")
 
-
-			###################################
-			#THIS IS ONLY FOR THE ADDON VERSION
-			###################################
-			# Import both left and right selectors
 			left_selector = import_json_as_model(left_selector_file_path, "Selector Icon.L")
 			right_selector = import_json_as_model(right_selector_file_path, "Selector Icon.R")
-
-			#THIS IS FOR THE SCRIPT VERSION
-			#left_selector = import_json_as_model("E:/Lselector.json", "Selector Icon.L")
-			#right_selector = import_json_as_model("E:/Rselector.json", "Selector Icon.R")
 
 			selectors = [left_selector, right_selector]
 		else:
 
-
 			# Build the file path to the Selector.json file
 			selector_file_path = os.path.join(script_directory, "selector.json")
 
-			###################################
-			#THIS IS ONLY FOR THE ADDON VERSION
-			###################################
-			# Import a single selector
 			selected_expression_selector = import_json_as_model(selector_file_path, "Selector Icon")
-
-			#THIS IS FOR THE SCRIPT VERSION
-			#selected_expression_selector = import_json_as_model("E:/selector.json", "Selector Icon")
 
 			selectors = [selected_expression_selector]
 
@@ -1787,7 +1745,6 @@ class AddExpressionOperator(bpy.types.Operator):
 			#This might need to change, if someone has numbers after their expression it will break
 			name_without_numbers = ''.join(filter(str.isalpha, child.name))
 
-
 			if name_without_numbers == "SelectorIconL":
 				left_selector = child
 				selectors.append(left_selector)
@@ -1846,16 +1803,12 @@ class AddExpressionOperator(bpy.types.Operator):
 						# Use re.sub to remove the matched pattern
 						name_without_numbers = re.sub(pattern, '', selector_icon.name)
 
-
 						#If the selector icon ends with .L
 						if (name_without_numbers.endswith(".L")):
-							#The selected shape key is the left one
 							selected_shape_key = left_shape_key
-
 
 						elif (name_without_numbers.endswith(".R")):
 							selected_shape_key = right_shape_key
-
 
 						result = setup_shape_key_driver(obj, selected_shape_key, selected_expression_selector, plane_obj)
 						print(f"The result after adding the drivers is: {result}")
@@ -1914,8 +1867,6 @@ class AddExpressionOperator(bpy.types.Operator):
 			plane_obj.location.x += offset_x
 			plane_obj.location.y -= offset_y
 
-
-
 			# Parent the plane to the empty
 			set_object_parent(plane_obj, text_obj)
 
@@ -1960,8 +1911,6 @@ class BulkAddExpressionsOperator(bpy.types.Operator):
 		for shape_key in shape_keys:
 			print(shape_key.name)
 
-
-
 		# Print the image filenames
 		for image_file in image_files:
 			# Extract the image name without extension
@@ -1993,8 +1942,6 @@ class BulkAddExpressionsOperator(bpy.types.Operator):
 
 						# Call the "Add Expression" operator to add the expression
 						bpy.ops.expressions.add_expression(image_path=self.image_to_use)
-
-
 		return {'FINISHED'}
 
 
@@ -2018,7 +1965,6 @@ class BulkAddAllExpressionsOperator(bpy.types.Operator):
 			set_error_text("This model has no shape keys. Please select a valid model", "INFO")
 			self.report({'INFO'}, "This model has no shape keys. Please select a valid model")
 			return {'CANCELLED'}
-
 
 		# Access the selected image path
 		image_path = context.scene.image_path
@@ -2061,8 +2007,6 @@ class BulkAddAllExpressionsOperator(bpy.types.Operator):
 
 		for i in categories:
 			print(f"Found categories: {i}")
-
-
 
 		# Initialize a Z location offset so the categories won't be placed on top of one another
 		z_offset = 0
@@ -2126,8 +2070,6 @@ class BulkAddAllExpressionsOperator(bpy.types.Operator):
 
 			# Increment the Z offset for the next category
 			z_offset -= num_rows * 0.11
-
-
 
 		return {'FINISHED'}
 
@@ -2211,9 +2153,6 @@ def add_image_plane(image_path):
 	return plane_obj
 
 
-
-
-
 def driver_snap_location(obj, property_index, transform_type, expression):
 	"""
 	This function takes in an object and makes it snap to the grid using location drivers
@@ -2264,13 +2203,10 @@ def driver_snap_location(obj, property_index, transform_type, expression):
 	# Set the transform space of the variable
 	object1.transform_space = 'TRANSFORM_SPACE'
 
-
 	# Add the driver to the driver expression
 	# round(var*10)/10 snaps the driver to increments of 0.1
 	# but the scale of our images is 0.1 so really this is a scale of 1
 	dr.driver.expression = f'{expression}'
-
-
 
 
 def setup_shape_key_driver(character_obj, prop, expression_selector_obj, plane_obj):
@@ -2287,10 +2223,6 @@ def setup_shape_key_driver(character_obj, prop, expression_selector_obj, plane_o
 
 	# Check if the character object exists
 	if character_obj:
-
-		print("Character object is valid")
-
-
 
 		if prop in character_obj.data:
 
@@ -2309,8 +2241,6 @@ def setup_shape_key_driver(character_obj, prop, expression_selector_obj, plane_o
 
 				#We've found a matching driver, but the image has been deleted, so we just need to reassign it
 				if var.targets[1].id == None:
-
-
 					set_error_text(f"Shape key driver '{prop}' exists but the image has been deleted", "INFO")
 
 					var.name = 'var'
@@ -2413,11 +2343,6 @@ def import_json_as_model(file_path, name):
 			obj.data.polygons[face_index].material_index = material_index
 
 	return obj
-
-
-
-
-
 
 
 def set_error_text(error_message, error_type):
