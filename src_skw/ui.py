@@ -21,6 +21,7 @@ class VIEW3D_PT_shape_key_widgets(Panel):
 
         col = layout.column()
         col.label(text="Hi there!")
+        col.operator("anim.skw_insert_keyframes_shapekey_category")
 
 
 # Add-on Registration #############################################################################
