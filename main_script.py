@@ -23,6 +23,9 @@ def obj_init(scene):
     character_obj = bpy.data.objects.get(bpy.context.scene.selected_character)
     current_category = bpy.context.scene.category_name
 
+    if not character_obj:
+        return
+
     if hasattr(bpy.context, "object"):
         selected_object = bpy.context.object
 
