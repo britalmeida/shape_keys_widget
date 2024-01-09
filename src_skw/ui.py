@@ -20,8 +20,8 @@ class VIEW3D_PT_shape_key_widgets(Panel):
         layout.use_property_decorate = False
 
         col = layout.column()
-        col.label(text="Hi there!")
         col.operator("anim.skw_insert_keyframes_shapekey_category")
+        col.operator("anim.skw_insert_keyframes_all_categories")
 
 
 # Add-on Registration #############################################################################
