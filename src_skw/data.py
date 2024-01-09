@@ -10,16 +10,13 @@ from bpy.app.handlers import persistent
 
 @persistent
 def on_depsgraph_update(scene):
-    print("update")
     for selected_object in bpy.context.selected_objects:
-        print(selected_object.name)
         if "-cursor" in selected_object.name:
 
             # If a SKW cursor has moved, transfer the shape key weights that are calculated by a
             # driver in a custom prop of the mesh, to the corresponding actual shape key.
             mesh_obj = bpy.data.objects["GEO-face"]
             for key in mesh_obj.data.shape_keys.key_blocks:
-                print(key.name)
                 if key.name.startswith("Eyes - "):
                     key.value = mesh_obj.data[key.name]
 
