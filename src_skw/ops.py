@@ -5,6 +5,7 @@ import logging
 log = logging.getLogger(__package__)
 
 import bpy
+from bpy.props import BoolProperty
 from bpy.types import Operator
 
 def keyframe_sk_influence(cursor_obj, frame):
@@ -39,6 +40,15 @@ class ANIM_OT_insert_keyframes_shapekey_category(Operator):
     bl_description = "Add keyframes for the Shape Keys of the category with the selected cursor"
     bl_options = {'UNDO', 'REGISTER'}
 
+    keyframe_values: BoolProperty(
+        name="Keyframe SK Values",
+        default=True,
+    )
+    keyframe_cursor: BoolProperty(
+        name="Keyframe Cursor",
+        default=True,
+    )
+
     @classmethod
     def poll(cls, context):
         return True
@@ -48,8 +58,10 @@ class ANIM_OT_insert_keyframes_shapekey_category(Operator):
 
         for selected_object in context.selected_objects:
             if selected_object.name.endswith("-cursor"):
-                keyframe_skw_cursor_pos(selected_object, current_frame)
-                keyframe_sk_influence(selected_object, current_frame)
+                if self.keyframe_cursor:
+                    keyframe_skw_cursor_pos(selected_object, current_frame)
+                if self.keyframe_values:
+                    keyframe_sk_influence(selected_object, current_frame)
 
         return {'FINISHED'}
 
@@ -60,6 +72,15 @@ class ANIM_OT_insert_keyframes_all_shapekeys(Operator):
     bl_description = "Add keyframes for all Shape Keys in all widget categories for all characters"
     bl_options = {'UNDO', 'REGISTER'}
 
+    keyframe_values: BoolProperty(
+        name="Keyframe SK Values",
+        default=True,
+    )
+    keyframe_cursor: BoolProperty(
+        name="Keyframe Cursor",
+        default=True,
+    )
+
     @classmethod
     def poll(cls, context):
         return True
@@ -69,8 +90,10 @@ class ANIM_OT_insert_keyframes_all_shapekeys(Operator):
 
         for collection in bpy.data.collections:
             if collection.name.endswith("-cursor"):
-                keyframe_skw_cursor_pos(collection, current_frame)
-                keyframe_sk_influence(collection, current_frame)
+                if self.keyframe_cursor:
+                    keyframe_skw_cursor_pos(collection, current_frame)
+                if self.keyframe_values:
+                    keyframe_sk_influence(collection, current_frame)
 
         return {'FINISHED'}
 
