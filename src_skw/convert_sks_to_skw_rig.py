@@ -14,16 +14,15 @@ log = logging.getLogger(__package__)
 
 
 # Name of the rig and mesh with the shape keys.
-RIG_NAME = 'RIG-claudia'
-GEO_NAME = 'GEO-claudia-head'
+RIG_NAME = 'RIG-maurizio'
+GEO_NAME = 'GEO-maurizio-head'
 #THUMBNAILS_FILEPATH = "//widget_demo_thumbs"
-THUMBS_COLLECTION_NAME = "claudia-rig-widgets-thumbnails"
-WGTS_COLLECTION_NAME = "claudia-rig-widgets"
+THUMBS_COLLECTION_NAME = "maurizio-rig-widgets-thumbnails"
+WGTS_COLLECTION_NAME = "maurizio-rig-widgets"
 CURSOR_MESH_OBJ_NAME = "WGT-sk-cursor"
-THUMB_MESH_OBJ_NAME = "WGT-thumbnail-selector"
 
 # Shape Key categories to generate widgets for.
-SHAPE_KEY_CATEGORIES = ["Mouth", "Phoneme", "Eyebrows"]
+SHAPE_KEY_CATEGORIES = ["Mouth", "Eyes"]
 # !!
 # File needs to already have: (e.g.: for category "Eyes")
 # - Shape keys called 'Eyes - Neutral', 'Eyes - Bla bla'
