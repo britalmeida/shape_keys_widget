@@ -468,19 +468,59 @@ class SCENE_OT_convert_sks_to_skw(Operator):
                 "It will be shown in the viewport, but hidden in renders.")
             return False
 
-        # Check for an existing thumbnail object for 'Neutral' and for each SK in each category.
-        for sk_category_name in SHAPE_KEY_CATEGORIES:
-            shape_key_names = find_shape_keys(sk_category_name)
+        mesh_obj = bpy.data.objects[GEO_NAME]
+        if not mesh_obj:
+            self.report({'ERROR'},
+                f"Model/character mesh named '{GEO_NAME}' not found")
+            return False
 
+        # Check for a match in SK and thumbnail objects for each SK in each category.
+        for sk_category_name in SHAPE_KEY_CATEGORIES:
+            shape_key_names = sorted(find_shape_keys(sk_category_name))
+
+            if not shape_key_names:
+                self.report({'ERROR'},
+                    f"Mesh does not have any Shape Keys for category '{sk_category_name}'")
+                return False
+
+            # Check for the 'Neutral' Shape Key.
             neutral_sk_name = f"{sk_category_name} - Neutral"
             if neutral_sk_name not in shape_key_names:
                 self.report({'ERROR'}, f"Mesh does not have a Shape Key called '{neutral_sk_name}'")
                 return False
 
-            for sk_name in shape_key_names:
+            # Match L and R shapes if they exist.
+            left_sk_names = [sk for sk in shape_key_names if sk.endswith(".L")]
+            right_sk_names = [sk for sk in shape_key_names if sk.endswith(".R")]
+            global_sk_names = [sk for sk in shape_key_names if not sk.endswith(".L") and not sk.endswith(".R")]
+            has_lr_keys = (len(left_sk_names) > 0 or len(right_sk_names) > 0)
+
+            if has_lr_keys:
+                if len(left_sk_names) != len(right_sk_names) or len(global_sk_names) > 1:
+                    self.report({'ERROR'},
+                        f"Mesh has mismatched shape keys for '{sk_category_name}'\n"
+                        f"Category needs 1 'Neutral' and all others (or none) ending with '.L' and '.R'.\n"
+                        f"Found: {len(global_sk_names)} global, {len(left_sk_names)} .L, {len(right_sk_names)} .R")
+                    return False
+
+                for lname, rname in zip(left_sk_names, right_sk_names):
+                    if lname[:-2] != rname[:-2]:
+                        self.report({'ERROR'},
+                            f"Mesh has mismatched shape keys for '{sk_category_name}'\n"
+                            f"Shapes ending with '.L' and '.R' need to match in name.\n"
+                            f"'{lname}' ≠ '{rname}'")
+                        return False
+
+            # Look for a thumbnail object matching each shape key (1 for each L/R pair).
+            sk_base_names = global_sk_names
+            if has_lr_keys:
+                sk_base_names += [sk[:-2] for sk in left_sk_names]
+
+            for sk_name in sk_base_names:
                 thumb_obj = bpy.data.objects.get(get_sk_thumb_obj_name(sk_name))
                 if not thumb_obj:
-                    self.report({'ERROR'}, f"File does not have an already existing thumbnail object called '{sk_name}'")
+                    self.report({'ERROR'},
+                        f"File does not have an already existing thumbnail object called '{sk_name}'")
                     return False
 
         rig = bpy.data.objects.get(RIG_NAME)
