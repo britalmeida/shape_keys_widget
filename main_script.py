@@ -2546,8 +2546,6 @@ def register():
         update=snapping_options,  # This will execute the function when the property changes
     )
 
-    bpy.types.Object.before_loc = bpy.props.FloatVectorProperty(name="before_loc",
-                                                                subtype="TRANSLATION")
     #The prop function now updates
     bpy.types.Scene.prop = PointerProperty(
         type=bpy.types.Object,
@@ -2561,16 +2559,19 @@ def register():
         items=RequiredPanel.populate_shape_key_items,
     )
 
-    bpy.app.handlers.depsgraph_update_post.append(obj_init)
+    # Disable the SKS code from actively running on every change.
+    # The original SKS should not do anything, unless a button is explicitly clicked for reference.
+    #bpy.types.Object.before_loc = bpy.props.FloatVectorProperty(name="before_loc", subtype="TRANSLATION")
+    #bpy.app.handlers.depsgraph_update_post.append(obj_init)
 
 
 def unregister():
 
-    bpy.app.handlers.depsgraph_update_post.remove(obj_init)
+    #bpy.app.handlers.depsgraph_update_post.remove(obj_init)
+    #del bpy.types.Object.before_loc
 
     del bpy.types.Scene.selected_shape_key
     del bpy.types.Scene.prop
-    del bpy.types.Object.before_loc
     del bpy.types.Scene.snapping_str
     del bpy.types.Scene.error_type
     del bpy.types.Scene.error_message
