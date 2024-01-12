@@ -35,6 +35,8 @@ SHAPE_KEY_CATEGORIES = ["Mouth", "Phoneme", "Eyebrows"]
 # - The rig widget mesh objects
 
 # --- Naming conventions ---
+# This is what gets generated for the Blender bones and objects as seen in the outliner.
+# Change as desired for the result.
 
 def get_sk_category_base_bone_name(sk_category_name):
     return f"SKS-{slugify_name(sk_category_name)}"
@@ -47,6 +49,12 @@ def get_sk_bone_name(sk_name):
 
 def get_sk_thumb_obj_name(sk_name):
     return f"{sk_name}"
+
+def get_wgt_cursor_obj_name():
+    return "WGT-sk-cursor"
+
+def get_wgt_thumb_obj_name():
+    return "WGT-thumbnail-selector"
 
 def slugify_name(name):
     name = name.replace(' ', '')
@@ -221,7 +229,7 @@ def setup_bone_custom_shapes(rig, sk_category_name, shape_key_names):
     cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)
     cursor_bone = pose_bones.get(cursor_bone_name)
 
-    cursor_mesh_obj = bpy.data.objects.get(CURSOR_MESH_OBJ_NAME)
+    cursor_mesh_obj = bpy.data.objects.get(get_wgt_cursor_obj_name())
     cursor_bone.custom_shape = cursor_mesh_obj
     cursor_bone.use_custom_shape_bone_size = False
     cursor_bone.custom_shape_rotation_euler[0] = radians(90)
@@ -229,12 +237,11 @@ def setup_bone_custom_shapes(rig, sk_category_name, shape_key_names):
     cursor_bone.custom_shape_translation[2] = 0.001
 
     # Thumbnail bones
-    thumb_mesh_obj = bpy.data.objects.get(THUMB_MESH_OBJ_NAME)
+    thumb_mesh_obj = bpy.data.objects.get(get_wgt_thumb_obj_name())
     for sk_name in shape_key_names:
         bone_name = get_sk_bone_name(sk_name)
         bone = pose_bones.get(bone_name)
         bone.custom_shape = thumb_mesh_obj
-
 
 
 def setup_bones_movement(rig, sk_category_name, shape_key_names):
@@ -324,7 +331,7 @@ def add_snap_location_driver(rig, bone, tf_channel, use_snap_user_option=False):
         snap_var_target.data_path = f'pose.bones["{bone.name}"]["snapping"]'
 
 
-def setup_sk_value_drivers(rig, shape_key_names):
+def setup_sk_value_drivers(rig, sk_category_name, shape_key_names):
 
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
@@ -402,6 +409,29 @@ def move_bones_to_layer(rig):
         rig.data.bones[bone.name].layers[21] = True
 
 
+def setup_wgts_objects_and_collection():
+
+    # Rig widgets collection should not be visible in the viewport when using the rig.
+    wgts_col.hide_select = True
+    wgts_col.hide_render = True
+    wgts_col.hide_viewport = True
+
+    # Setup custom mesh to be shared for the cursor(s).
+    cursor_mesh_data_name = "Selector Icon"
+    cursor_mesh_obj_name = get_wgt_cursor_obj_name()
+    cursor_mesh_data = bpy.data.meshes.get(cursor_mesh_data_name)
+    cursor_mesh_obj = bpy.data.objects.get(cursor_mesh_obj_name)
+
+    if not cursor_mesh_obj:
+        cursor_mesh_obj = bpy.data.objects.new(cursor_mesh_obj_name, cursor_mesh_data)
+
+    move_to_collection(cursor_mesh_obj, wgts_col)
+
+    # Remove old cursors using the mesh.
+    objs_to_remove = [ob for ob in bpy.data.objects if ob.name.startswith("Selector Icon")]
+    for ob in objs_to_remove:
+        bpy.data.objects.remove(ob)
+
 
 class SCENE_OT_convert_sks_to_skw(Operator):
     bl_idname = "scene.convert_sks_to_skw"
@@ -417,18 +447,25 @@ class SCENE_OT_convert_sks_to_skw(Operator):
 
         wgts_col = bpy.data.collections.get(WGTS_COLLECTION_NAME)
         if not wgts_col:
-            self.report({'ERROR'}, f"File does not have an already existing collection named '{WGTS_COLLECTION_NAME}'")
+            self.report({'ERROR'}, f"""Missing collection named '{WGTS_COLLECTION_NAME}' to hold meshes 
+            for bone custom shapes. It will be hidden in the viewport.""")
             return {'CANCELLED'}
 
-        cursor_mesh_obj = bpy.data.objects.get(CURSOR_MESH_OBJ_NAME)
+        # TODO: SKW should make the custom shape mesh data for the cursors and thumbnail moving.
+        # Then it won't be a user error, but now the mesh data needs to be in the file.
         cursor_mesh_data = bpy.data.meshes.get("Selector Icon")
-        if not cursor_mesh_obj and not cursor_mesh_data:
-            self.report({'ERROR'}, f"File does not have an already existing mesh object named 'Selector Icon'")
+        cursor_l_mesh_data = bpy.data.meshes.get("Selector Icon.L")
+        cursor_r_mesh_data = bpy.data.meshes.get("Selector Icon.R")
+        thumb_selector_mesh_data = bpy.data.meshes.get(get_wgt_thumb_obj_name())
+        if not cursor_mesh_data or not cursor_l_mesh_data or not cursor_r_mesh_data or not thumb_selector_mesh_data:
+            self.report({'ERROR'}, f"""Missing custom mesh objects for bone custom shapes. Needs objects with 
+            a mesh called 'Selector Icon', 'Selector Icon.L', 'Selector Icon.R' and '{get_wgt_thumb_obj_name()}'""")
             return {'CANCELLED'}
 
         thumbs_col = bpy.data.collections.get(THUMBS_COLLECTION_NAME)
         if not thumbs_col:
-            self.report({'ERROR'}, f"File does not have an already existing collection named '{THUMBS_COLLECTION_NAME}'")
+            self.report({'ERROR'}, f"""Missing collection named '{THUMBS_COLLECTION_NAME}' to hold thumbnail mesh 
+            objects that are parented to the rig. It will be shown in the viewport, but hidden in renders.""")
             return {'CANCELLED'}
 
         # Check for an existing thumbnail object for 'Neutral' and for each SK in each category.
@@ -467,19 +504,7 @@ class SCENE_OT_convert_sks_to_skw(Operator):
         # Set the rig as the active object so the conversion can switch between edit/pose/object mode as needed.
         bpy.context.view_layer.objects.active = rig
 
-        # Check the rig widgets collection.
-        wgts_col.hide_select = True
-        wgts_col.hide_render = True
-        wgts_col.hide_viewport = True
-
-        # Setup custom mesh to be shared for the cursor(s).
-        if not cursor_mesh_obj:
-            cursor_mesh_obj = bpy.data.objects.new(CURSOR_MESH_OBJ_NAME, cursor_mesh_data)
-        move_to_collection(cursor_mesh_obj, wgts_col)
-        # Remove old cursors using the mesh.
-        objs_to_remove = [ob for ob in bpy.data.objects if ob.name.startswith("Selector Icon")]
-        for ob in objs_to_remove:
-            bpy.data.objects.remove(ob)
+        setup_wgts_objects_and_collection()
 
         # Convert the selector widget setup for each shape key category.
         for sk_category_name in SHAPE_KEY_CATEGORIES:
@@ -493,7 +518,7 @@ class SCENE_OT_convert_sks_to_skw(Operator):
             setup_thumbnails(rig, shape_key_names)
             setup_bone_custom_shapes(rig, sk_category_name, shape_key_names)
             setup_bones_movement(rig, sk_category_name, shape_key_names)
-            setup_sk_value_drivers(rig, shape_key_names)
+            setup_sk_value_drivers(rig, sk_category_name, shape_key_names)
 
         log.info("Done")
         return {'FINISHED'}
