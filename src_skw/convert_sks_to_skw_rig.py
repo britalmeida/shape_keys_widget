@@ -11,8 +11,6 @@ from mathutils import Vector, Matrix
 log = logging.getLogger(__package__)
 
 
-
-
 # Name of the rig and mesh with the shape keys.
 RIG_NAME = 'RIG-maurizio'
 GEO_NAME = 'GEO-maurizio-head'
@@ -411,6 +409,7 @@ def move_bones_to_layer(rig):
 def setup_wgts_objects_and_collection():
 
     # Rig widgets collection should not be visible in the viewport when using the rig.
+    wgts_col = bpy.data.collections.get(WGTS_COLLECTION_NAME)
     wgts_col.hide_select = True
     wgts_col.hide_render = True
     wgts_col.hide_viewport = True
@@ -439,16 +438,15 @@ class SCENE_OT_convert_sks_to_skw(Operator):
         Migrate data on a file that was setup with the Shape Key Selector V1 addon to a rig"""
     bl_options = {'UNDO', 'REGISTER'}
 
-    def execute(self, context):
-
-        # Check for the required setup to run the conversion and early out
-        # before modifying data if something is missing.
+    def meets_requirements_for_conversion(self, context) -> bool:
 
         wgts_col = bpy.data.collections.get(WGTS_COLLECTION_NAME)
         if not wgts_col:
-            self.report({'ERROR'}, f"""Missing collection named '{WGTS_COLLECTION_NAME}' to hold meshes 
-            for bone custom shapes. It will be hidden in the viewport.""")
-            return {'CANCELLED'}
+            self.report({'ERROR'},
+                f"Missing collection named '{WGTS_COLLECTION_NAME}'\n"
+                "Needed to hold meshes for bone custom shapes.\n"
+                "It will be hidden in the viewport.")
+            return False
 
         # TODO: SKW should make the custom shape mesh data for the cursors and thumbnail moving.
         # Then it won't be a user error, but now the mesh data needs to be in the file.
@@ -457,15 +455,18 @@ class SCENE_OT_convert_sks_to_skw(Operator):
         cursor_r_mesh_data = bpy.data.meshes.get("Selector Icon.R")
         thumb_selector_mesh_data = bpy.data.meshes.get(get_wgt_thumb_obj_name())
         if not cursor_mesh_data or not cursor_l_mesh_data or not cursor_r_mesh_data or not thumb_selector_mesh_data:
-            self.report({'ERROR'}, f"""Missing custom mesh objects for bone custom shapes. Needs objects with 
-            a mesh called 'Selector Icon', 'Selector Icon.L', 'Selector Icon.R' and '{get_wgt_thumb_obj_name()}'""")
-            return {'CANCELLED'}
+            self.report({'ERROR'},
+                "Missing custom mesh objects for bone custom shapes.\n"
+                f"Needs objects with a mesh called 'Selector Icon', 'Selector Icon.L', 'Selector Icon.R' and '{get_wgt_thumb_obj_name()}'")
+            return False
 
         thumbs_col = bpy.data.collections.get(THUMBS_COLLECTION_NAME)
         if not thumbs_col:
-            self.report({'ERROR'}, f"""Missing collection named '{THUMBS_COLLECTION_NAME}' to hold thumbnail mesh 
-            objects that are parented to the rig. It will be shown in the viewport, but hidden in renders.""")
-            return {'CANCELLED'}
+            self.report({'ERROR'},
+                f"Missing collection named '{THUMBS_COLLECTION_NAME}'\n"
+                "Needed to hold thumbnail mesh objects that are parented to the rig.\n"
+                "It will be shown in the viewport, but hidden in renders.")
+            return False
 
         # Check for an existing thumbnail object for 'Neutral' and for each SK in each category.
         for sk_category_name in SHAPE_KEY_CATEGORIES:
@@ -474,33 +475,41 @@ class SCENE_OT_convert_sks_to_skw(Operator):
             neutral_sk_name = f"{sk_category_name} - Neutral"
             if neutral_sk_name not in shape_key_names:
                 self.report({'ERROR'}, f"Mesh does not have a Shape Key called '{neutral_sk_name}'")
-                return {'CANCELLED'}
+                return False
 
             for sk_name in shape_key_names:
                 thumb_obj = bpy.data.objects.get(get_sk_thumb_obj_name(sk_name))
                 if not thumb_obj:
                     self.report({'ERROR'}, f"File does not have an already existing thumbnail object called '{sk_name}'")
-                    return {'CANCELLED'}
+                    return False
 
         rig = bpy.data.objects.get(RIG_NAME)
         if not rig:
             self.report({'ERROR'}, f"Can not find rig with name '{RIG_NAME}' to modify")
-            return {'CANCELLED'}
-
-        armature = rig.data
+            return False
 
         # Check for a base bone for each SK category.
+        armature = rig.data
         for sk_category_name in SHAPE_KEY_CATEGORIES:
             base_bone_name = get_sk_category_base_bone_name(sk_category_name)
             base_bone = armature.bones.get(base_bone_name)
             if not base_bone:
                 self.report({'ERROR'}, f"Rig does not have an already existing bone called '{base_bone_name}'")
-                return {'CANCELLED'}
+                return False
 
+        return True
+
+    def execute(self, context):
+
+        # Check for the required setup to run the conversion and early out
+        # before modifying data if something is missing.
+        if not self.meets_requirements_for_conversion(context):
+            return {'CANCELLED'}
 
         log.info("Generating Shape Key widget rigs...")
 
         # Set the rig as the active object so the conversion can switch between edit/pose/object mode as needed.
+        rig = bpy.data.objects.get(RIG_NAME)
         bpy.context.view_layer.objects.active = rig
 
         setup_wgts_objects_and_collection()
