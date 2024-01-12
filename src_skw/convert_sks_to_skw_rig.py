@@ -1,10 +1,15 @@
 # SPDX-FileCopyrightText: 2024 Shape Keys Widget Authors
 # SPDX-License-Identifier: GPL-3.0
 
+import logging
 from math import radians
 
 import bpy
+from bpy.types import Operator
 from mathutils import Vector, Matrix
+
+log = logging.getLogger(__package__)
+
 
 
 
@@ -87,15 +92,12 @@ def create_bones(rig, sk_category_name, shape_key_names):
     armature = rig.data
 
     # Switch to Edit Mode to add bones
-    bpy.context.view_layer.objects.active = rig
     bpy.ops.object.mode_set(mode='EDIT')
     edit_bones = armature.edit_bones
 
     # Find the base bone. The new bones will be parented to this one.
     base_bone_name = get_sk_category_base_bone_name(sk_category_name)
     base_bone = edit_bones.get(base_bone_name)
-    if not base_bone:
-        raise ValueError(f"Rig does not have an already existing bone called '{base_bone_name}'")
 
     # Create cursor bone.
     cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)
@@ -116,8 +118,6 @@ def create_bones(rig, sk_category_name, shape_key_names):
 
         # Find the corresponding thumbnail object which should already exist in the file.
         thumb_obj = bpy.data.objects.get(get_sk_thumb_obj_name(sk_name))
-        if not thumb_obj:
-            raise ValueError(f"File does not have an already existing thumbnail object called '{sk_name}'")
 
         # Place the bone at the thumbnail's center coordinates in world space.
         pos = thumb_obj.matrix_world.to_translation()
@@ -142,7 +142,6 @@ def add_custom_properties(rig, sk_category_name, shape_key_names):
     armature = rig.data
 
     # Switch to Pose Mode to configure bone properties usable in pose mode.
-    bpy.context.view_layer.objects.active = rig
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
 
@@ -165,8 +164,6 @@ def add_custom_properties(rig, sk_category_name, shape_key_names):
 def setup_thumbnails(rig, shape_key_names):
     # Find the thumbnails collection.
     thumbs_col = bpy.data.collections.get(THUMBS_COLLECTION_NAME)
-    if not thumbs_col:
-        raise ValueError(f"File does not have an already existing collection named '{THUMBS_COLLECTION_NAME}'")
 
     # The thumbnails should not be selectable or end up in final renders.
     thumbs_col.hide_select = True
@@ -174,7 +171,6 @@ def setup_thumbnails(rig, shape_key_names):
     thumbs_col.hide_viewport = False
 
     # Switch to Pose Mode to access pose bone locations.
-    bpy.context.view_layer.objects.active = rig
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
 
@@ -219,7 +215,6 @@ def setup_bone_custom_shapes(rig, sk_category_name, shape_key_names):
     armature = rig.data
 
     # Switch to Pose Mode to configure bone shapes.
-    bpy.context.view_layer.objects.active = rig
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
 
@@ -247,7 +242,6 @@ def setup_bones_movement(rig, sk_category_name, shape_key_names):
     armature = rig.data
 
     # Switch to Pose Mode to configure transform channels that can be keyed.
-    bpy.context.view_layer.objects.active = rig
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
 
@@ -408,47 +402,116 @@ def move_bones_to_layer(rig):
         rig.data.bones[bone.name].layers[21] = True
 
 
-# --- Run ---
 
-print("Generating Shape Key widget rigs...")
+class SCENE_OT_convert_sks_to_skw(Operator):
+    bl_idname = "scene.convert_sks_to_skw"
+    bl_label = "Convert SKS to SKW rig"
+    bl_description = """
+        Migrate data on a file that was setup with the Shape Key Selector V1 addon to a rig"""
+    bl_options = {'UNDO', 'REGISTER'}
 
-# Check the rig widgets collection.
-wgts_col = bpy.data.collections.get(WGTS_COLLECTION_NAME)
-if not wgts_col:
-    raise ValueError(f"File does not have an already existing collection named '{WGTS_COLLECTION_NAME}'")
-wgts_col.hide_select = True
-wgts_col.hide_render = True
-wgts_col.hide_viewport = True
+    def execute(self, context):
 
-# Setup custom mesh to be shared for the cursor(s).
-cursor_mesh_obj = bpy.data.objects.get(CURSOR_MESH_OBJ_NAME)
-if not cursor_mesh_obj:
-    cursor_mesh_data = bpy.data.meshes.get("Selector Icon")
-    if not cursor_mesh_data:
-        raise ValueError(f"File does not have an already existing mesh object named 'Selector Icon'")
-    cursor_mesh_obj = bpy.data.objects.new(CURSOR_MESH_OBJ_NAME, cursor_mesh_data)
-move_to_collection(cursor_mesh_obj, wgts_col)
-# Remove old cursors using the mesh.
-objs_to_remove = [ob for ob in bpy.data.objects if ob.name.startswith("Selector Icon")]
-for ob in objs_to_remove:
-    bpy.data.objects.remove(ob)
+        # Check for the required setup to run the conversion and early out
+        # before modifying data if something is missing.
 
-# Find the rig
-rig = bpy.data.objects.get(RIG_NAME)
-if not rig:
-    raise ValueError(f"Can not find rig with name '{RIG_NAME}' to modify")
+        wgts_col = bpy.data.collections.get(WGTS_COLLECTION_NAME)
+        if not wgts_col:
+            self.report({'ERROR'}, f"File does not have an already existing collection named '{WGTS_COLLECTION_NAME}'")
+            return {'CANCELLED'}
 
-for sk_category_name in SHAPE_KEY_CATEGORIES:
+        cursor_mesh_obj = bpy.data.objects.get(CURSOR_MESH_OBJ_NAME)
+        cursor_mesh_data = bpy.data.meshes.get("Selector Icon")
+        if not cursor_mesh_obj and not cursor_mesh_data:
+            self.report({'ERROR'}, f"File does not have an already existing mesh object named 'Selector Icon'")
+            return {'CANCELLED'}
 
-    shape_key_names = find_shape_keys(sk_category_name)
-    print(f"... Creating '{sk_category_name}' widget with {len(shape_key_names)} shapes.")
+        thumbs_col = bpy.data.collections.get(THUMBS_COLLECTION_NAME)
+        if not thumbs_col:
+            self.report({'ERROR'}, f"File does not have an already existing collection named '{THUMBS_COLLECTION_NAME}'")
+            return {'CANCELLED'}
 
-    create_bones(rig, sk_category_name, shape_key_names)
-    move_bones_to_layer(rig)
-    add_custom_properties(rig, sk_category_name, shape_key_names)
-    setup_thumbnails(rig, shape_key_names)
-    setup_bone_custom_shapes(rig, sk_category_name, shape_key_names)
-    setup_bones_movement(rig, sk_category_name, shape_key_names)
-    setup_sk_value_drivers(rig, shape_key_names)
+        # Check for an existing thumbnail object for 'Neutral' and for each SK in each category.
+        for sk_category_name in SHAPE_KEY_CATEGORIES:
+            shape_key_names = find_shape_keys(sk_category_name)
 
-print("Done")
+            neutral_sk_name = f"{sk_category_name} - Neutral"
+            if neutral_sk_name not in shape_key_names:
+                self.report({'ERROR'}, f"Mesh does not have a Shape Key called '{neutral_sk_name}'")
+                return {'CANCELLED'}
+
+            for sk_name in shape_key_names:
+                thumb_obj = bpy.data.objects.get(get_sk_thumb_obj_name(sk_name))
+                if not thumb_obj:
+                    self.report({'ERROR'}, f"File does not have an already existing thumbnail object called '{sk_name}'")
+                    return {'CANCELLED'}
+
+        rig = bpy.data.objects.get(RIG_NAME)
+        if not rig:
+            self.report({'ERROR'}, f"Can not find rig with name '{RIG_NAME}' to modify")
+            return {'CANCELLED'}
+
+        armature = rig.data
+
+        # Check for a base bone for each SK category.
+        for sk_category_name in SHAPE_KEY_CATEGORIES:
+            base_bone_name = get_sk_category_base_bone_name(sk_category_name)
+            base_bone = armature.bones.get(base_bone_name)
+            if not base_bone:
+                self.report({'ERROR'}, f"Rig does not have an already existing bone called '{base_bone_name}'")
+                return {'CANCELLED'}
+
+
+        log.info("Generating Shape Key widget rigs...")
+
+        # Set the rig as the active object so the conversion can switch between edit/pose/object mode as needed.
+        bpy.context.view_layer.objects.active = rig
+
+        # Check the rig widgets collection.
+        wgts_col.hide_select = True
+        wgts_col.hide_render = True
+        wgts_col.hide_viewport = True
+
+        # Setup custom mesh to be shared for the cursor(s).
+        if not cursor_mesh_obj:
+            cursor_mesh_obj = bpy.data.objects.new(CURSOR_MESH_OBJ_NAME, cursor_mesh_data)
+        move_to_collection(cursor_mesh_obj, wgts_col)
+        # Remove old cursors using the mesh.
+        objs_to_remove = [ob for ob in bpy.data.objects if ob.name.startswith("Selector Icon")]
+        for ob in objs_to_remove:
+            bpy.data.objects.remove(ob)
+
+        # Convert the selector widget setup for each shape key category.
+        for sk_category_name in SHAPE_KEY_CATEGORIES:
+
+            shape_key_names = find_shape_keys(sk_category_name)
+            log.info(f"... Creating '{sk_category_name}' widget with {len(shape_key_names)} shapes.")
+
+            create_bones(rig, sk_category_name, shape_key_names)
+            move_bones_to_layer(rig)
+            add_custom_properties(rig, sk_category_name, shape_key_names)
+            setup_thumbnails(rig, shape_key_names)
+            setup_bone_custom_shapes(rig, sk_category_name, shape_key_names)
+            setup_bones_movement(rig, sk_category_name, shape_key_names)
+            setup_sk_value_drivers(rig, shape_key_names)
+
+        log.info("Done")
+        return {'FINISHED'}
+
+
+
+# Add-on Registration #############################################################################
+
+classes = (
+    SCENE_OT_convert_sks_to_skw,
+)
+
+
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
+
+
+def unregister():
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)

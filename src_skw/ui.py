@@ -11,7 +11,7 @@ from bpy.types import Panel
 class VIEW3D_PT_shape_key_widgets(Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Shape Key Widgets"
+    bl_category = "Item" #"Shape Key Widgets"
     bl_label = "WIP"
     bl_description = """Configuration of thumbnails and categories should go here."""
 
@@ -20,7 +20,7 @@ class VIEW3D_PT_shape_key_widgets(Panel):
         layout.use_property_split = True
 
         col = layout.column()
-        col.label(text="Hello again :)")
+        col.operator("scene.convert_sks_to_skw")
 
 
 
