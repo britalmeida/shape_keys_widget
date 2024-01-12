@@ -61,6 +61,15 @@ def slugify_name(name):
 
 # --- Stuff ---
 
+def find_shape_keys(category_name):
+    shape_keys = bpy.data.objects[GEO_NAME].data.shape_keys.key_blocks
+    filtered_shape_key_names = []
+    for key in shape_keys:
+        if key.name.startswith(category_name + ' - '):
+            filtered_shape_key_names.append(key.name)
+    return filtered_shape_key_names
+
+
 def nuke_existing_and_make_new_bone(edit_bones, bone_name):
     # If the bone already existed in the file, delete it and create a fresh new one.
     bone = edit_bones.get(bone_name)
@@ -91,49 +100,43 @@ def move_to_collection(ob, collection):
     collection.objects.link(ob)
 
 
-def create_bones(rig, sk_category_name, shape_key_names):
+def create_bones(rig, sk_category_name, shape_key_base_names, has_lr_keys):
+    # If the bones already exist, delete them and create fresh new ones.
 
-    # Get the armature datablock
-    armature = rig.data
-
-    # Switch to Edit Mode to add bones
+    # Switch to Edit Mode to add bones.
     bpy.ops.object.mode_set(mode='EDIT')
-    edit_bones = armature.edit_bones
+    edit_bones = rig.data.edit_bones
 
     # Find the base bone. The new bones will be parented to this one.
     base_bone_name = get_sk_category_base_bone_name(sk_category_name)
     base_bone = edit_bones.get(base_bone_name)
 
-    # Create cursor bone.
-    cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)
-    cursor_bone = nuke_existing_and_make_new_bone(edit_bones, cursor_bone_name)
-    # Parent the cursor bone.
-    cursor_bone.parent = base_bone
+    # Find the Neutral thumbnail position.
+    neutral_thumb_obj = bpy.data.objects.get(get_sk_thumb_obj_name(f"{sk_category_name} - Neutral"))
+    neutral_thumb_pos = neutral_thumb_obj.matrix_world.to_translation()
+
+    # Create cursor bones.
+    # (before the thumbnails so it looks nice in the outliner)
+    for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
+        cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)+cursor_type
+        cursor_bone = nuke_existing_and_make_new_bone(edit_bones, cursor_bone_name)
+        cursor_bone.parent = base_bone
+
+        # Place the cursor bones(s) on the Neutral thumbnail.
+        cursor_bone.tail = neutral_thumb_pos
+        cursor_bone.head = neutral_thumb_pos + Vector((0, 0, -0.05))
 
     # Create bones for each shape key thumbnail.
-    for sk_name in shape_key_names:
-        # Generate the bone name
+    for sk_name in shape_key_base_names:
         new_bone_name = get_sk_bone_name(sk_name)
-
-        # If the bone already existed in the file, delete it and create a fresh new one.
         new_bone = nuke_existing_and_make_new_bone(edit_bones, new_bone_name)
-
-        # Parent the bone.
         new_bone.parent = base_bone
 
-        # Find the corresponding thumbnail object which should already exist in the file.
+        # Place the bone at the corresponding thumbnail's center coordinates in world space.
         thumb_obj = bpy.data.objects.get(get_sk_thumb_obj_name(sk_name))
-
-        # Place the bone at the thumbnail's center coordinates in world space.
         pos = thumb_obj.matrix_world.to_translation()
         new_bone.tail = pos
         new_bone.head = pos + Vector((0, 0, -0.05))
-
-    # Place the cursor bone on the Neutral thumbnail.
-    neutral_thumb_obj = bpy.data.objects.get(get_sk_thumb_obj_name(f"{sk_category_name} - Neutral"))
-    pos = neutral_thumb_obj.matrix_world.to_translation()
-    cursor_bone.tail = pos
-    cursor_bone.head = pos + Vector((0, 0, -0.05))
 
     # Update the scene
     bpy.context.view_layer.update()
@@ -142,31 +145,30 @@ def create_bones(rig, sk_category_name, shape_key_names):
     bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def add_custom_properties(rig, sk_category_name, shape_key_names):
-    # Get the armature datablock
-    armature = rig.data
+def add_bone_custom_properties(rig, sk_category_name, shape_key_base_names, has_lr_keys):
 
     # Switch to Pose Mode to configure bone properties usable in pose mode.
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
 
-    # Add cursor custom property 'snapping'.
-    cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)
-    cursor_bone = pose_bones.get(cursor_bone_name)
-    cursor_bone["snapping"] = True
-    id_props = cursor_bone.id_properties_ui("snapping")
-    id_props.update(description="Snap the widget cursor to shape key poses")
+    for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
+        # Add cursor custom property 'snapping'.
+        cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)+cursor_type
+        cursor_bone = pose_bones.get(cursor_bone_name)
+        cursor_bone["snapping"] = True
+        id_props = cursor_bone.id_properties_ui("snapping")
+        id_props.update(description="Snap the widget cursor to shape key poses")
 
-    # Add thumbnail bone custom property 'cursor_influence'.
-    for sk_name in shape_key_names:
-        bone_name = get_sk_bone_name(sk_name)
-        bone = pose_bones.get(bone_name)
-        bone["cursor_influence"] = 0.0
-        id_props = bone.id_properties_ui("cursor_influence")
-        id_props.update(subtype='FACTOR', min=0.0, max=1.0)
+        # Add thumbnail bone custom property 'cursor_influence'.
+        for sk_name in shape_key_base_names:
+            bone_name = get_sk_bone_name(sk_name)
+            bone = pose_bones.get(bone_name)
+            bone["cursor_influence"+cursor_type] = 0.0
+            id_props = bone.id_properties_ui("cursor_influence"+cursor_type)
+            id_props.update(subtype='FACTOR', min=0.0, max=1.0)
 
 
-def setup_thumbnails(rig, shape_key_names):
+def setup_thumbnails(rig, shape_key_base_names):
     # Find the thumbnails collection.
     thumbs_col = bpy.data.collections.get(THUMBS_COLLECTION_NAME)
 
@@ -179,7 +181,7 @@ def setup_thumbnails(rig, shape_key_names):
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
 
-    for sk_name in shape_key_names:
+    for sk_name in shape_key_base_names:
         thumb_obj = bpy.data.objects.get(get_sk_thumb_obj_name(sk_name))
         bone_name = get_sk_bone_name(sk_name)
         bone = pose_bones.get(bone_name)
@@ -215,51 +217,51 @@ def setup_thumbnails(rig, shape_key_names):
         # TODO setup material and thumbnail texture.
 
 
-def setup_bone_custom_shapes(rig, sk_category_name, shape_key_names):
-    # Get the armature datablock
-    armature = rig.data
+def setup_bone_custom_shapes(rig, sk_category_name, shape_key_base_names, has_lr_keys):
 
     # Switch to Pose Mode to configure bone shapes.
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
 
-    cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)
-    cursor_bone = pose_bones.get(cursor_bone_name)
+    # Cursor custom shape.
+    for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
+        cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)+cursor_type
+        cursor_bone = pose_bones.get(cursor_bone_name)
 
-    cursor_mesh_obj = bpy.data.objects.get(get_wgt_cursor_obj_name())
-    cursor_bone.custom_shape = cursor_mesh_obj
-    cursor_bone.use_custom_shape_bone_size = False
-    cursor_bone.custom_shape_rotation_euler[0] = radians(90)
-    cursor_bone.custom_shape_translation[1] = 0.05
-    cursor_bone.custom_shape_translation[2] = 0.001
+        cursor_mesh_name = get_wgt_cursor_obj_name()+cursor_type
+        cursor_mesh_obj = bpy.data.objects.get(cursor_mesh_name)
+        cursor_bone.custom_shape = cursor_mesh_obj
+        cursor_bone.use_custom_shape_bone_size = False
+        cursor_bone.custom_shape_rotation_euler[0] = radians(90)
+        cursor_bone.custom_shape_translation[1] = 0.05
+        cursor_bone.custom_shape_translation[2] = 0.001
 
     # Thumbnail bones
     thumb_mesh_obj = bpy.data.objects.get(get_wgt_thumb_obj_name())
-    for sk_name in shape_key_names:
+    for sk_name in shape_key_base_names:
         bone_name = get_sk_bone_name(sk_name)
         bone = pose_bones.get(bone_name)
         bone.custom_shape = thumb_mesh_obj
 
 
-def setup_bones_movement(rig, sk_category_name, shape_key_names):
-    # Get the armature datablock
-    armature = rig.data
+def setup_bones_movement(rig, sk_category_name, shape_key_base_names, has_lr_keys):
 
     # Switch to Pose Mode to configure transform channels that can be keyed.
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
 
     # Cursor
-    cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)
-    cursor_bone = pose_bones.get(cursor_bone_name)
+    for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
+        cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)+cursor_type
+        cursor_bone = pose_bones.get(cursor_bone_name)
 
-    lock_transform(cursor_bone, lock_also_x_and_y=False)
+        lock_transform(cursor_bone, lock_also_x_and_y=False)
 
-    add_snap_location_driver(rig, cursor_bone, 'LOC_X', use_snap_user_option=True)
-    add_snap_location_driver(rig, cursor_bone, 'LOC_Y', use_snap_user_option=True)
+        add_snap_location_driver(rig, cursor_bone, 'LOC_X', use_snap_user_option=True)
+        add_snap_location_driver(rig, cursor_bone, 'LOC_Y', use_snap_user_option=True)
 
     # Thumbnail bones
-    for sk_name in shape_key_names:
+    for sk_name in shape_key_base_names:
         bone_name = get_sk_bone_name(sk_name)
         bone = pose_bones.get(bone_name)
 
@@ -267,15 +269,6 @@ def setup_bones_movement(rig, sk_category_name, shape_key_names):
 
         add_snap_location_driver(rig, bone, 'LOC_X', use_snap_user_option=False)
         add_snap_location_driver(rig, bone, 'LOC_Y', use_snap_user_option=False)
-
-
-def find_shape_keys(category_name):
-    shape_keys = bpy.data.objects[GEO_NAME].data.shape_keys.key_blocks
-    filtered_shape_key_names = []
-    for key in shape_keys:
-        if key.name.startswith(category_name + ' - '):
-            filtered_shape_key_names.append(key.name)
-    return filtered_shape_key_names
 
 
 def add_snap_location_driver(rig, bone, tf_channel, use_snap_user_option=False):
@@ -328,72 +321,93 @@ def add_snap_location_driver(rig, bone, tf_channel, use_snap_user_option=False):
         snap_var_target.data_path = f'pose.bones["{bone.name}"]["snapping"]'
 
 
-def setup_sk_value_drivers(rig, sk_category_name, shape_key_names):
+def add_cursor_influence_driver(rig, bone, cursor_influence_prop_name, cursor_bone_name):
+    # Note: driver is being added to a bone, which were (re)created fresh.
+    # Therefore, there is no need to look for previously existing drivers.
+
+    # Add a driver to the given custom property name.
+    dr = bone.driver_add(f'["{cursor_influence_prop_name}"]')
+    # Remove automatically added polynomial modifier.
+    if dr.modifiers:
+        dr.modifiers.remove(dr.modifiers[0])
+
+    dr.driver.type = 'SCRIPTED'
+    dr.driver.expression = "max(0, 1 - 10 * var)"
+
+    # Create a variable for the world space distance between a thumbnail and cursor bone.
+    var = dr.driver.variables.new()
+    var.name = 'var'
+    var.type = 'LOC_DIFF'
+
+    object1 = var.targets[0]
+    object2 = var.targets[1]
+
+    object1.id = rig
+    object1.bone_target = cursor_bone_name
+    object2.id = rig
+    object2.bone_target = bone.name
+
+    object1.transform_space = 'WORLD_SPACE'
+    object2.transform_space = 'WORLD_SPACE'
+
+
+def add_shape_key_value_driver(rig, shape_key, thumbnail_bone_name, cursor_influence_prop_name):
+    # Remove the existing driver if it exists
+    shape_key.driver_remove('value')
+
+    # Add a driver to the given axis
+    dr = shape_key.driver_add('value')
+    # Remove automatically added polynomial modifier.
+    if dr.modifiers:
+        dr.modifiers.remove(dr.modifiers[0])
+
+    dr.driver.type = 'SUM'  # Get value of single variable.
+
+    # Add a variable for the influence of the cursor on this shape key
+    var = dr.driver.variables.new()
+    var.name = 'var'
+    var.type = 'SINGLE_PROP'
+
+    var_target = var.targets[0]
+    var_target.id_type = 'OBJECT'
+    var_target.id = rig
+    var_target.data_path = f'pose.bones["{thumbnail_bone_name}"]["{cursor_influence_prop_name}"]'
+
+
+def setup_sk_value_drivers(rig, sk_category_name, shape_key_base_names, has_lr_keys):
 
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
     cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)
 
     # Setup driver for the cursor influence on each thumbnail bone.
-    for sk_name in shape_key_names:
+    for sk_name in shape_key_base_names:
         bone_name = get_sk_bone_name(sk_name)
         bone = pose_bones.get(bone_name)
 
-        # Remove the existing driver if it exists
-        bone.driver_remove('["cursor_influence"]')
-
-        # Add a driver to the given axis
-        dr = bone.driver_add('["cursor_influence"]')
-        # Remove automatically added polynomial modifier.
-        if dr.modifiers:
-            dr.modifiers.remove(dr.modifiers[0])
-
-        dr.driver.type = 'SCRIPTED'
-        dr.driver.expression = "max(0, 1 - 10 * var)"
-
-        # Create a new variable
-        var = dr.driver.variables.new()
-        var.name = 'var'
-        var.type = 'LOC_DIFF'
-
-        # Set the targets for the custom property
-        object1 = var.targets[0]
-        object2 = var.targets[1]
-
-        # Set object1 to be the Selector Icon and Object 2 to be the image plane
-        object1.id = rig
-        object1.bone_target = cursor_bone_name
-        object2.id = rig
-        object2.bone_target = bone_name
-
-        object1.transform_space = 'WORLD_SPACE'
-        object2.transform_space = 'WORLD_SPACE'
+        for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
+            add_cursor_influence_driver(
+                rig, bone,
+                "cursor_influence"+cursor_type,
+                cursor_bone_name+cursor_type)
 
     # Setup driver for the SK value from the cursor influence.
     shape_keys = bpy.data.objects[GEO_NAME].data.shape_keys.key_blocks
-    for sk_name in shape_key_names:
-        sk = shape_keys[sk_name]
+    for sk_base_name in shape_key_base_names:
+        thumbnail_bone_name = get_sk_bone_name(sk_base_name)
 
-        # Remove the existing driver if it exists
-        sk.driver_remove(f'value')
+        if sk_base_name.endswith('Neutral'):
+            sk = shape_keys[sk_base_name]
+            add_shape_key_value_driver(
+                rig, sk,
+                thumbnail_bone_name, "cursor_influence")
+            continue
 
-        # Add a driver to the given axis
-        dr = sk.driver_add("value")
-        # Remove automatically added polynomial modifier.
-        if dr.modifiers:
-            dr.modifiers.remove(dr.modifiers[0])
-
-        dr.driver.type = 'SUM'
-
-        # Add a variable for the influence of the cursor on this shape key
-        var = dr.driver.variables.new()
-        var.name = 'var'
-        var.type = 'SINGLE_PROP'
-
-        var_target = var.targets[0]
-        var_target.id_type = 'OBJECT'
-        var_target.id = rig
-        var_target.data_path = f'pose.bones["{get_sk_bone_name(sk_name)}"]["cursor_influence"]'
+        for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
+            sk = shape_keys[sk_base_name+cursor_type]
+            add_shape_key_value_driver(
+                rig, sk,
+                thumbnail_bone_name, "cursor_influence"+cursor_type)
 
 
 def move_bones_to_layer(rig):
@@ -415,15 +429,16 @@ def setup_wgts_objects_and_collection():
     wgts_col.hide_viewport = True
 
     # Setup custom mesh to be shared for the cursor(s).
-    cursor_mesh_data_name = "Selector Icon"
-    cursor_mesh_obj_name = get_wgt_cursor_obj_name()
-    cursor_mesh_data = bpy.data.meshes.get(cursor_mesh_data_name)
-    cursor_mesh_obj = bpy.data.objects.get(cursor_mesh_obj_name)
+    for cursor_type in ["", ".L", ".R"]:
+        cursor_mesh_data_name = "Selector Icon"+cursor_type
+        cursor_mesh_obj_name = get_wgt_cursor_obj_name()+cursor_type
+        cursor_mesh_data = bpy.data.meshes.get(cursor_mesh_data_name)
+        cursor_mesh_obj = bpy.data.objects.get(cursor_mesh_obj_name)
 
-    if not cursor_mesh_obj:
-        cursor_mesh_obj = bpy.data.objects.new(cursor_mesh_obj_name, cursor_mesh_data)
+        if not cursor_mesh_obj:
+            cursor_mesh_obj = bpy.data.objects.new(cursor_mesh_obj_name, cursor_mesh_data)
 
-    move_to_collection(cursor_mesh_obj, wgts_col)
+        move_to_collection(cursor_mesh_obj, wgts_col)
 
     # Remove old cursors using the mesh.
     objs_to_remove = [ob for ob in bpy.data.objects if ob.name.startswith("Selector Icon")]
@@ -557,16 +572,28 @@ class SCENE_OT_convert_sks_to_skw(Operator):
         # Convert the selector widget setup for each shape key category.
         for sk_category_name in SHAPE_KEY_CATEGORIES:
 
+            # Gather the set of thumbnail and shape key names to configure the widget.
             shape_key_names = find_shape_keys(sk_category_name)
-            log.info(f"... Creating '{sk_category_name}' widget with {len(shape_key_names)} shapes.")
+            left_sk_names = [sk for sk in shape_key_names if sk.endswith(".L")]
+            global_sk_names = [sk for sk in shape_key_names if not sk.endswith(".L") and not sk.endswith(".R")]
 
-            create_bones(rig, sk_category_name, shape_key_names)
+            # Prepare set of shape key names matching the thumbnails, by stripping '.L' endings
+            # and having only one base name per pair.
+            has_lr_keys = any(sk.endswith(".L") for sk in shape_key_names)
+            shape_key_base_names = global_sk_names
+            if has_lr_keys:
+                shape_key_base_names += [sk[:-2] for sk in left_sk_names]
+
+            log.info(f"... Creating '{sk_category_name}' widget with {shape_key_base_names} thumbnails.")
+
+            create_bones(rig, sk_category_name, shape_key_base_names, has_lr_keys)
             move_bones_to_layer(rig)
-            add_custom_properties(rig, sk_category_name, shape_key_names)
-            setup_thumbnails(rig, shape_key_names)
-            setup_bone_custom_shapes(rig, sk_category_name, shape_key_names)
-            setup_bones_movement(rig, sk_category_name, shape_key_names)
-            setup_sk_value_drivers(rig, sk_category_name, shape_key_names)
+            add_bone_custom_properties(rig, sk_category_name, shape_key_base_names, has_lr_keys)
+
+            setup_thumbnails(rig, shape_key_base_names)
+            setup_bone_custom_shapes(rig, sk_category_name, shape_key_base_names, has_lr_keys)
+            setup_bones_movement(rig, sk_category_name, shape_key_base_names, has_lr_keys)
+            setup_sk_value_drivers(rig, sk_category_name, shape_key_base_names, has_lr_keys)
 
         log.info("Done")
         return {'FINISHED'}
