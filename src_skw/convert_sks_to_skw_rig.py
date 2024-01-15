@@ -38,6 +38,9 @@ def get_sk_bone_name(sk_name):
 def get_sk_thumb_obj_name(sk_name):
     return f"{sk_name}"
 
+def get_wgt_category_obj_name(sk_category_name):
+    return f"WGT-sk-text-{slugify_name(sk_category_name)}"
+
 def get_wgt_cursor_obj_name():
     return "WGT-sk-cursor"
 
@@ -265,12 +268,6 @@ def setup_bones_movement(rig, sk_category_name, shape_key_base_names, has_lr_key
 
 
 def add_snap_location_driver(rig, bone, tf_channel, use_snap_user_option=False):
-    """
-    This function takes in an object and makes it snap to the grid using location drivers
-
-    Args:
-        tf_channel: 'LOC_X' or 'LOC_Y'
-    """
     property_index = 0 if tf_channel == 'LOC_X' else 1
 
     # Remove the existing driver if it exists
@@ -413,7 +410,7 @@ def move_bones_to_layer(rig):
         rig.data.bones[bone.name].layers[21] = True
 
 
-def setup_wgts_objects_and_collection(wgts_col_name):
+def setup_wgt_objects_and_collection(wgts_col_name, category_names):
 
     # Rig widgets collection should not be visible in the viewport when using the rig.
     wgts_col = bpy.data.collections.get(wgts_col_name)
@@ -437,6 +434,54 @@ def setup_wgts_objects_and_collection(wgts_col_name):
     objs_to_remove = [ob for ob in bpy.data.objects if ob.name.startswith("Selector Icon")]
     for ob in objs_to_remove:
         bpy.data.objects.remove(ob)
+
+
+    # Create text widgets for each SK category.
+
+    # Save state of selection and enabled collections.
+    user_preferred_exclude_value = True
+    for layer_col in bpy.context.view_layer.layer_collection.children:
+        if layer_col.name == wgts_col_name:
+            user_preferred_exclude_value = layer_col.exclude
+            layer_col.exclude = False
+            break
+    active_object = bpy.context.view_layer.objects.active
+    selected_objects = bpy.context.selected_objects
+    for obj in selected_objects:
+        obj.select_set(False)
+
+    for sk_category_name in category_names:
+        text_obj = create_category_text_custom_shape_obj(wgts_col, sk_category_name)
+        text_obj.select_set(True)
+
+    bpy.context.view_layer.update()
+    #bpy.ops.object.convert(target='CURVE', keep_original=False)
+
+    # Restore selection and collections state.
+    for obj in bpy.context.selected_objects:
+        obj.select_set(False)
+    for obj in selected_objects:
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = active_object
+    for layer_col in bpy.context.view_layer.layer_collection.children:
+        if layer_col.name == wgts_col_name:
+            layer_col.exclude = user_preferred_exclude_value
+            break
+
+
+def create_category_text_custom_shape_obj(wgts_col, sk_category_name):
+
+    display_name = sk_category_name
+    wgt_obj_name = get_wgt_category_obj_name(sk_category_name)
+
+    text_data = bpy.data.curves.new(type="FONT", name=wgt_obj_name)
+    text_data.body = display_name
+    text_data.dimensions = '3D'
+
+    text_obj = bpy.data.objects.new(name=wgt_obj_name, object_data=text_data)
+    move_to_collection(text_obj, wgts_col)
+
+    return text_obj
 
 
 class SCENE_OT_convert_sks_to_skw(Operator):
@@ -592,14 +637,15 @@ class SCENE_OT_convert_sks_to_skw(Operator):
 
         log.info("Generating Shape Key widget rigs...")
 
+        category_names = [n.strip() for n in self.categories_str.split(',')]
+
         # Set the rig as the active object so the conversion can switch between edit/pose/object mode as needed.
         rig = bpy.data.objects.get(self.rig_name)
         bpy.context.view_layer.objects.active = rig
 
-        setup_wgts_objects_and_collection(self.wgts_collection_name)
+        setup_wgt_objects_and_collection(self.wgts_collection_name, category_names)
 
         # Convert the selector widget setup for each shape key category.
-        category_names = [n.strip() for n in self.categories_str.split(',')]
         for sk_category_name in category_names:
 
             # Gather the set of thumbnail and shape key names to configure the widget.
@@ -624,6 +670,9 @@ class SCENE_OT_convert_sks_to_skw(Operator):
             setup_bone_custom_shapes(rig, sk_category_name, shape_key_base_names, has_lr_keys)
             setup_bones_movement(rig, sk_category_name, shape_key_base_names, has_lr_keys)
             setup_sk_value_drivers(self.geo_name, rig, sk_category_name, shape_key_base_names, has_lr_keys)
+
+        # TODO Cleanup SKS objects.
+        # find collection, if only empty text objects and no thumbnails, delete it.
 
         log.info("Done")
         return {'FINISHED'}
