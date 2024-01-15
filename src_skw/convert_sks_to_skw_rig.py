@@ -410,14 +410,41 @@ def move_bones_to_layer(rig):
         rig.data.bones[bone.name].layers[21] = True
 
 
+def find_layer_collection(layer_col, col_name):
+    if (layer_col.name == col_name):
+        return layer_col
+
+    for lc in layer_col.children:
+        found_lc = find_layer_collection(lc, col_name)
+        if found_lc:
+            return found_lc
+
+def layer_collection_set_exclude(layer_col, col_name, exclude_value):
+    if (layer_col.name == col_name):
+        layer_col.exclude = exclude_value
+        return True
+
+    for lc in layer_col.children:
+        if find_layer_collection(lc, col_name):
+            return True
+
+
 def setup_wgt_objects_and_collection(wgts_col_name, category_names):
 
-    # Rig widgets collection should not be visible in the viewport when using the rig.
     wgts_col = bpy.data.collections.get(wgts_col_name)
-    wgts_col.hide_select = True
-    wgts_col.hide_render = True
-    wgts_col.hide_viewport = True
 
+    # Temporarily ensure that the collection is selectable and part of the view layer,
+    # so that this code can run operators on its objects.
+    wgts_col.hide_select = False
+    wgts_col.hide_render = False
+    wgts_col.hide_viewport = False
+    # Find the Collection Layer that wgts_col Collection is in.
+    layer_col = None
+    user_preferred_active_collection = bpy.context.view_layer.active_layer_collection
+    layer_col = find_layer_collection(bpy.context.view_layer.layer_collection, wgts_col_name)
+    # Ensure the collection is part of the view layer and save the previous state to restore later.
+    user_preferred_exclude_value = layer_col.exclude
+    layer_col.exclude = False
     # Setup custom mesh to be shared for the cursor(s).
     for cursor_type in ["", ".L", ".R"]:
         cursor_mesh_data_name = "Selector Icon"+cursor_type
@@ -435,38 +462,33 @@ def setup_wgt_objects_and_collection(wgts_col_name, category_names):
     for ob in objs_to_remove:
         bpy.data.objects.remove(ob)
 
-
     # Create text widgets for each SK category.
-
-    # Save state of selection and enabled collections.
-    user_preferred_exclude_value = True
-    for layer_col in bpy.context.view_layer.layer_collection.children:
-        if layer_col.name == wgts_col_name:
-            user_preferred_exclude_value = layer_col.exclude
-            layer_col.exclude = False
-            break
-    active_object = bpy.context.view_layer.objects.active
-    selected_objects = bpy.context.selected_objects
-    for obj in selected_objects:
-        obj.select_set(False)
-
+    text_objects = []
     for sk_category_name in category_names:
         text_obj = create_category_text_custom_shape_obj(wgts_col, sk_category_name)
-        text_obj.select_set(True)
+        text_objects.append(text_obj)
 
+    # Convert the font into a 3D curve so it doesn't look tesselated in wireframe mode.
+    # The convert operator needs an active object and also the active objects to have their
+    # select flag on. See issue #93188
     bpy.context.view_layer.update()
-    #bpy.ops.object.convert(target='CURVE', keep_original=False)
+    with bpy.context.temp_override(
+        active_object=text_objects[0],
+        # selected_objects=text_objects
+        ):
+        for ob in text_objects:
+            ob.select_set(True)
+        bpy.ops.object.convert(target='CURVE', keep_original=False)
+    for ob in text_objects:
+        ob.select_set(False)
 
-    # Restore selection and collections state.
-    for obj in bpy.context.selected_objects:
-        obj.select_set(False)
-    for obj in selected_objects:
-        obj.select_set(True)
-    bpy.context.view_layer.objects.active = active_object
-    for layer_col in bpy.context.view_layer.layer_collection.children:
-        if layer_col.name == wgts_col_name:
-            layer_col.exclude = user_preferred_exclude_value
-            break
+    # Rig widgets collection should not be visible in the viewport when using the rig.
+    wgts_col.hide_select = True
+    wgts_col.hide_render = True
+    wgts_col.hide_viewport = True
+    # TODO: check why the line below has no effect.
+    layer_collection_set_exclude(bpy.context.view_layer.layer_collection, wgts_col_name, user_preferred_exclude_value)
+    bpy.context.view_layer.active_layer_collection = user_preferred_active_collection
 
 
 def create_category_text_custom_shape_obj(wgts_col, sk_category_name):
