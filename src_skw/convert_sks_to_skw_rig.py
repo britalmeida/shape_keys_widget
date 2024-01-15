@@ -5,22 +5,13 @@ import logging
 from math import radians
 
 import bpy
+from bpy.props import StringProperty
 from bpy.types import Operator
 from mathutils import Vector, Matrix
 
 log = logging.getLogger(__package__)
 
 
-# Name of the rig and mesh with the shape keys.
-RIG_NAME = 'RIG-maurizio'
-GEO_NAME = 'GEO-maurizio-head'
-#THUMBNAILS_FILEPATH = "//widget_demo_thumbs"
-THUMBS_COLLECTION_NAME = "maurizio-rig-widgets-thumbnails"
-WGTS_COLLECTION_NAME = "maurizio-rig-widgets"
-CURSOR_MESH_OBJ_NAME = "WGT-sk-cursor"
-
-# Shape Key categories to generate widgets for.
-SHAPE_KEY_CATEGORIES = ["Mouth", "Eyes"]
 # !!
 # File needs to already have: (e.g.: for category "Eyes")
 # - Shape keys called 'Eyes - Neutral', 'Eyes - Bla bla'
@@ -61,8 +52,8 @@ def slugify_name(name):
 
 # --- Stuff ---
 
-def find_shape_keys(category_name):
-    shape_keys = bpy.data.objects[GEO_NAME].data.shape_keys.key_blocks
+def find_shape_keys(mesh_name, category_name):
+    shape_keys = bpy.data.objects[mesh_name].data.shape_keys.key_blocks
     filtered_shape_key_names = []
     for key in shape_keys:
         if key.name.startswith(category_name + ' - '):
@@ -168,9 +159,9 @@ def add_bone_custom_properties(rig, sk_category_name, shape_key_base_names, has_
             id_props.update(subtype='FACTOR', min=0.0, max=1.0)
 
 
-def setup_thumbnails(rig, shape_key_base_names):
+def setup_thumbnails(thumbs_col_name, rig, shape_key_base_names):
     # Find the thumbnails collection.
-    thumbs_col = bpy.data.collections.get(THUMBS_COLLECTION_NAME)
+    thumbs_col = bpy.data.collections.get(thumbs_col_name)
 
     # The thumbnails should not be selectable or end up in final renders.
     thumbs_col.hide_select = True
@@ -374,7 +365,7 @@ def add_shape_key_value_driver(rig, shape_key, thumbnail_bone_name, cursor_influ
     var_target.data_path = f'pose.bones["{thumbnail_bone_name}"]["{cursor_influence_prop_name}"]'
 
 
-def setup_sk_value_drivers(rig, sk_category_name, shape_key_base_names, has_lr_keys):
+def setup_sk_value_drivers(mesh_name, rig, sk_category_name, shape_key_base_names, has_lr_keys):
 
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
@@ -392,7 +383,7 @@ def setup_sk_value_drivers(rig, sk_category_name, shape_key_base_names, has_lr_k
                 cursor_bone_name+cursor_type)
 
     # Setup driver for the SK value from the cursor influence.
-    shape_keys = bpy.data.objects[GEO_NAME].data.shape_keys.key_blocks
+    shape_keys = bpy.data.objects[mesh_name].data.shape_keys.key_blocks
     for sk_base_name in shape_key_base_names:
         thumbnail_bone_name = get_sk_bone_name(sk_base_name)
 
@@ -420,10 +411,10 @@ def move_bones_to_layer(rig):
         rig.data.bones[bone.name].layers[21] = True
 
 
-def setup_wgts_objects_and_collection():
+def setup_wgts_objects_and_collection(wgts_col_name):
 
     # Rig widgets collection should not be visible in the viewport when using the rig.
-    wgts_col = bpy.data.collections.get(WGTS_COLLECTION_NAME)
+    wgts_col = bpy.data.collections.get(wgts_col_name)
     wgts_col.hide_select = True
     wgts_col.hide_render = True
     wgts_col.hide_viewport = True
@@ -453,12 +444,39 @@ class SCENE_OT_convert_sks_to_skw(Operator):
         Migrate data on a file that was setup with the Shape Key Selector V1 addon to a rig"""
     bl_options = {'UNDO', 'REGISTER'}
 
+
+    rig_name: StringProperty(
+        name="Rig Name",
+        description="Existing rig where to add new bone controls for the shape keys",
+        default="RIG-claudia",
+    )
+    geo_name: StringProperty(
+        name="GEO Name",
+        description="Mesh with shape keys",
+        default="GEO-claudia-head",
+    )
+    thumbs_collection_name: StringProperty(
+        name="Thumbnails Collection",
+        description="Collection for thumbnail objects. Will be visible in the viewport.",
+        default="claudia-rig-widgets-thumbnails",
+    )
+    wgts_collection_name: StringProperty(
+        name="Rig Widgets Collection",
+        description="Collection for rig WGT objects. Will be hidden in the viewport.",
+        default="claudia-rig-widgets",
+    )
+    categories_str: StringProperty(
+        name="Shape Key Categories",
+        description="Comma separated list of Shape Key categories to generate controls for",
+        default="Mouth, Eyes",
+    )
+
     def meets_requirements_for_conversion(self, context) -> bool:
 
-        wgts_col = bpy.data.collections.get(WGTS_COLLECTION_NAME)
+        wgts_col = bpy.data.collections.get(self.wgts_collection_name)
         if not wgts_col:
             self.report({'ERROR'},
-                f"Missing collection named '{WGTS_COLLECTION_NAME}'\n"
+                f"Missing collection named '{self.wgts_collection_name}'\n"
                 "Needed to hold meshes for bone custom shapes.\n"
                 "It will be hidden in the viewport.")
             return False
@@ -475,23 +493,24 @@ class SCENE_OT_convert_sks_to_skw(Operator):
                 f"Needs objects with a mesh called 'Selector Icon', 'Selector Icon.L', 'Selector Icon.R' and '{get_wgt_thumb_obj_name()}'")
             return False
 
-        thumbs_col = bpy.data.collections.get(THUMBS_COLLECTION_NAME)
+        thumbs_col = bpy.data.collections.get(self.thumbs_collection_name)
         if not thumbs_col:
             self.report({'ERROR'},
-                f"Missing collection named '{THUMBS_COLLECTION_NAME}'\n"
+                f"Missing collection named '{self.thumbs_collection_name}'\n"
                 "Needed to hold thumbnail mesh objects that are parented to the rig.\n"
                 "It will be shown in the viewport, but hidden in renders.")
             return False
 
-        mesh_obj = bpy.data.objects[GEO_NAME]
+        mesh_obj = bpy.data.objects[self.geo_name]
         if not mesh_obj:
             self.report({'ERROR'},
-                f"Model/character mesh named '{GEO_NAME}' not found")
+                f"Model/character mesh named '{self.geo_name}' not found")
             return False
 
         # Check for a match in SK and thumbnail objects for each SK in each category.
-        for sk_category_name in SHAPE_KEY_CATEGORIES:
-            shape_key_names = sorted(find_shape_keys(sk_category_name))
+        category_names = [n.strip() for n in self.categories_str.split(',')]
+        for sk_category_name in category_names:
+            shape_key_names = sorted(find_shape_keys(self.geo_name, sk_category_name))
 
             if not shape_key_names:
                 self.report({'ERROR'},
@@ -538,14 +557,15 @@ class SCENE_OT_convert_sks_to_skw(Operator):
                         f"File does not have an already existing thumbnail object called '{sk_name}'")
                     return False
 
-        rig = bpy.data.objects.get(RIG_NAME)
+        rig = bpy.data.objects.get(self.rig_name)
         if not rig:
-            self.report({'ERROR'}, f"Can not find rig with name '{RIG_NAME}' to modify")
+            self.report({'ERROR'}, f"Can not find rig with name '{self.rig_name}' to modify")
             return False
 
         # Check for a base bone for each SK category.
         armature = rig.data
-        for sk_category_name in SHAPE_KEY_CATEGORIES:
+        category_names = [n.strip() for n in self.categories_str.split(',')]
+        for sk_category_name in category_names:
             base_bone_name = get_sk_category_base_bone_name(sk_category_name)
             base_bone = armature.bones.get(base_bone_name)
             if not base_bone:
@@ -553,6 +573,13 @@ class SCENE_OT_convert_sks_to_skw(Operator):
                 return False
 
         return True
+
+
+    def invoke(self, context, event):
+        """Present dialog to configure the properties before running the operator"""
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
+
 
     def execute(self, context):
 
@@ -564,16 +591,17 @@ class SCENE_OT_convert_sks_to_skw(Operator):
         log.info("Generating Shape Key widget rigs...")
 
         # Set the rig as the active object so the conversion can switch between edit/pose/object mode as needed.
-        rig = bpy.data.objects.get(RIG_NAME)
+        rig = bpy.data.objects.get(self.rig_name)
         bpy.context.view_layer.objects.active = rig
 
-        setup_wgts_objects_and_collection()
+        setup_wgts_objects_and_collection(self.wgts_collection_name)
 
         # Convert the selector widget setup for each shape key category.
-        for sk_category_name in SHAPE_KEY_CATEGORIES:
+        category_names = [n.strip() for n in self.categories_str.split(',')]
+        for sk_category_name in category_names:
 
             # Gather the set of thumbnail and shape key names to configure the widget.
-            shape_key_names = find_shape_keys(sk_category_name)
+            shape_key_names = find_shape_keys(self.geo_name, sk_category_name)
             left_sk_names = [sk for sk in shape_key_names if sk.endswith(".L")]
             global_sk_names = [sk for sk in shape_key_names if not sk.endswith(".L") and not sk.endswith(".R")]
 
@@ -590,10 +618,10 @@ class SCENE_OT_convert_sks_to_skw(Operator):
             move_bones_to_layer(rig)
             add_bone_custom_properties(rig, sk_category_name, shape_key_base_names, has_lr_keys)
 
-            setup_thumbnails(rig, shape_key_base_names)
+            setup_thumbnails(self.thumbs_collection_name, rig, shape_key_base_names)
             setup_bone_custom_shapes(rig, sk_category_name, shape_key_base_names, has_lr_keys)
             setup_bones_movement(rig, sk_category_name, shape_key_base_names, has_lr_keys)
-            setup_sk_value_drivers(rig, sk_category_name, shape_key_base_names, has_lr_keys)
+            setup_sk_value_drivers(self.geo_name, rig, sk_category_name, shape_key_base_names, has_lr_keys)
 
         log.info("Done")
         return {'FINISHED'}
