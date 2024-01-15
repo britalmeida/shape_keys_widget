@@ -111,6 +111,7 @@ def create_bones(rig, sk_category_name, shape_key_base_names, has_lr_keys):
     for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
         cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)+cursor_type
         cursor_bone = nuke_existing_and_make_new_bone(edit_bones, cursor_bone_name)
+        cursor_bone.use_deform = False
         cursor_bone.parent = base_bone
 
         # Place the cursor bones(s) on the Neutral thumbnail.
@@ -121,6 +122,7 @@ def create_bones(rig, sk_category_name, shape_key_base_names, has_lr_keys):
     for sk_name in shape_key_base_names:
         new_bone_name = get_sk_bone_name(sk_name)
         new_bone = nuke_existing_and_make_new_bone(edit_bones, new_bone_name)
+        new_bone.use_deform = False
         new_bone.parent = base_bone
 
         # Place the bone at the corresponding thumbnail's center coordinates in world space.
