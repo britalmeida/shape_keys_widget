@@ -9,14 +9,27 @@ from bpy.props import StringProperty
 from bpy.types import AddonPreferences, Panel
 
 
-class VIEW3D_PT_shape_key_widgets(Panel):
+class VIEW3D_PT_shape_key_widgets_setup(Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Item" #"Shape Key Widgets"
-    bl_label = "Setup Shape Key Widgets"
+    bl_category = "Shape Key Widgets"
+    bl_label = "Setup"
     bl_description = """Configuration of thumbnails and categories should go here."""
 
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
 
+        col = layout.column()
+        col.label(text="WIP :)")
+
+
+class VIEW3D_PT_shape_key_widgets_conversion(Panel):
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Shape Key Widgets"
+    bl_label = "Migration from SKS"
+    bl_description = """Controls for converting an existing Shape Key Selector V1 setup to a rig"""
 
     def draw(self, context):
         layout = self.layout
@@ -56,8 +69,9 @@ class VIEW3D_ShapeKeyWidgets_Preferences(AddonPreferences):
 # Add-on Registration #############################################################################
 
 classes = (
-    VIEW3D_PT_shape_key_widgets,
     VIEW3D_ShapeKeyWidgets_Preferences,
+    VIEW3D_PT_shape_key_widgets_setup,
+    VIEW3D_PT_shape_key_widgets_conversion,
 )
 
 
