@@ -39,7 +39,7 @@ def get_sk_thumb_obj_name(sk_name):
     return f"{sk_name}"
 
 def get_wgt_category_obj_name(sk_category_name):
-    return f"WGT-sk-text-{slugify_name(sk_category_name)}"
+    return f"WGT-sk-label-{slugify_name(sk_category_name)}"
 
 def get_wgt_cursor_obj_name():
     return "WGT-sk-cursor"
