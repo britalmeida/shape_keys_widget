@@ -101,11 +101,30 @@ def create_bones(rig, sk_category_name, shape_key_base_names, has_lr_keys):
     bpy.ops.object.mode_set(mode='EDIT')
     edit_bones = rig.data.edit_bones
 
-    # Find the base bone. The new bones will be parented to this one.
+    # Make a new base bone for the category. The new bones will be parented to this one.
     base_bone_name = get_sk_category_base_bone_name(sk_category_name)
+    # If the bone already exists from a previous run, preserve its position.
     base_bone = edit_bones.get(base_bone_name)
+    base_pos = Vector((1.0, 0.0, 1.0))
+    if base_bone:
+        base_pos = base_bone.head
+    else:
+        # Bone does not exist. Get the location of the corresponding SKS text.
+        text_objects = [t for t in bpy.data.objects \
+            if t.type == 'FONT' and 
+            t.name == sk_category_name and \
+            t.data.body == sk_category_name]
+        # Pray we found exactly one object.
+        if len(text_objects) == 1:
+            text_data = text_objects[0].data
+            base_pos = text_objects[0].location + Vector((text_data.offset_x, text_data.offset_y, 0))
+    base_bone = nuke_existing_and_make_new_bone(edit_bones, base_bone_name)
+    base_bone.use_deform = False
+    base_bone.parent = edit_bones.get("root")
+    base_bone.tail = base_pos + Vector((0, 0, 0.05))
+    base_bone.head = base_pos
 
-    # Find the Neutral thumbnail position.
+    # Find the Neutral thumbnail position. The cursor bone will be placed here.
     neutral_thumb_obj = bpy.data.objects.get(get_sk_thumb_obj_name(f"{sk_category_name} - Neutral"))
     neutral_thumb_pos = neutral_thumb_obj.matrix_world.to_translation()
 
@@ -219,6 +238,12 @@ def setup_bone_custom_shapes(rig, sk_category_name, shape_key_base_names, has_lr
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
 
+    # Category label
+    label_mesh_obj = bpy.data.objects.get(get_wgt_category_obj_name(sk_category_name))
+    base_bone_name = get_sk_category_base_bone_name(sk_category_name)
+    base_bone = pose_bones.get(base_bone_name)
+    base_bone.custom_shape = label_mesh_obj
+
     # Cursor custom shape.
     for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
         cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)+cursor_type
@@ -245,6 +270,12 @@ def setup_bones_movement(rig, sk_category_name, shape_key_base_names, has_lr_key
     # Switch to Pose Mode to configure transform channels that can be keyed.
     bpy.ops.object.mode_set(mode='POSE')
     pose_bones = rig.pose.bones
+
+    # Category base bone
+    base_bone_name = get_sk_category_base_bone_name(sk_category_name)
+    base_bone = pose_bones.get(base_bone_name)
+
+    lock_transform(base_bone, lock_also_x_and_y=False)
 
     # Cursor
     for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
@@ -419,7 +450,7 @@ def find_layer_collection(layer_col, col_name):
         if found_lc:
             return found_lc
 
-def layer_collection_set_exclude(layer_col, col_name, exclude_value):
+def layer_collection_set_exclude_from_view_layer(layer_col, col_name, exclude_value):
     if (layer_col.name == col_name):
         layer_col.exclude = exclude_value
         return True
@@ -476,6 +507,8 @@ def setup_wgt_objects_and_collection(wgts_col_name, category_names):
         for ob in text_objects:
             ob.select_set(True)
         bpy.ops.object.convert(target='CURVE', keep_original=False)
+        for ob in text_objects:
+            ob.data.dimensions = '3D'
     for ob in text_objects:
         ob.select_set(False)
 
@@ -484,7 +517,8 @@ def setup_wgt_objects_and_collection(wgts_col_name, category_names):
     wgts_col.hide_render = True
     wgts_col.hide_viewport = True
     # TODO: check why the line below has no effect.
-    layer_collection_set_exclude(bpy.context.view_layer.layer_collection, wgts_col_name, user_preferred_exclude_value)
+    layer_collection_set_exclude_from_view_layer(
+        bpy.context.view_layer.layer_collection, wgts_col_name, user_preferred_exclude_value)
     bpy.context.view_layer.active_layer_collection = user_preferred_active_collection
 
 
@@ -495,7 +529,8 @@ def create_category_text_custom_shape_obj(wgts_col, sk_category_name):
 
     text_data = bpy.data.curves.new(type="FONT", name=wgt_obj_name)
     text_data.body = display_name
-    text_data.dimensions = '3D'
+    text_data.align_x = 'RIGHT'
+    text_data.align_y = 'CENTER'
 
     text_obj = bpy.data.objects.new(name=wgt_obj_name, object_data=text_data)
     move_to_collection(text_obj, wgts_col)
@@ -509,6 +544,7 @@ def remove_sks_objects(category_names):
     objs_to_remove = [ob for ob in bpy.data.objects if ob.name.startswith("Selector Icon")]
     for ob in objs_to_remove:
         bpy.data.objects.remove(ob)
+    # TODO remove only if no longer used
 
     # Remove text objects for the category labels.
     # Look for Text (font) datablocks, with the text content of a SK category
@@ -654,13 +690,11 @@ class SCENE_OT_convert_sks_to_skw(Operator):
 
         # Check for a base bone for each SK category.
         armature = rig.data
-        category_names = [n.strip() for n in self.categories_str.split(',')]
-        for sk_category_name in category_names:
-            base_bone_name = get_sk_category_base_bone_name(sk_category_name)
-            base_bone = armature.bones.get(base_bone_name)
-            if not base_bone:
-                self.report({'ERROR'}, f"Rig does not have an already existing bone called '{base_bone_name}'")
-                return False
+        root_bone = armature.bones.get('root')
+        if not root_bone:
+            self.report({'ERROR'},
+                f"Rig does not have an already existing bone called 'root' to parent new bones to")
+            return False
 
         return True
 
