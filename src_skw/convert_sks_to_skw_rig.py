@@ -471,6 +471,8 @@ def setup_wgt_objects_and_collection(wgts_col_name, category_names):
         active_object=text_objects[0],
         # selected_objects=text_objects
         ):
+        for ob in bpy.context.selected_objects:
+            ob.select_set(False)
         for ob in text_objects:
             ob.select_set(True)
         bpy.ops.object.convert(target='CURVE', keep_original=False)
@@ -680,6 +682,13 @@ class SCENE_OT_convert_sks_to_skw(Operator):
 
         category_names = [n.strip() for n in self.categories_str.split(',')]
 
+        # Save context state to restore it as it was when this operator is done.
+        original_state = {
+            "view3d_mode": bpy.context.object.mode,
+            'active_obj': bpy.context.view_layer.objects.active,
+            'selected_objects': bpy.context.selected_objects,
+        }
+
         # Set the rig as the active object so the conversion can switch between edit/pose/object mode as needed.
         rig = bpy.data.objects.get(self.rig_name)
         bpy.context.view_layer.objects.active = rig
@@ -713,6 +722,17 @@ class SCENE_OT_convert_sks_to_skw(Operator):
             setup_sk_value_drivers(self.geo_name, rig, sk_category_name, shape_key_base_names, has_lr_keys)
 
         remove_sks_objects(category_names)
+
+        # Restore context for the user.
+        try:
+            bpy.context.view_layer.objects.active = original_state['active_obj']
+            for ob in original_state['selected_objects']:
+                ob.select_set(True)
+            if bpy.context.active_object:
+                bpy.ops.object.mode_set(mode=original_state['view3d_mode'])
+        except ReferenceError:
+            # The selection had objects which were deleted. Can't restore context to that.
+            pass
 
         log.info("Done")
         return {'FINISHED'}
