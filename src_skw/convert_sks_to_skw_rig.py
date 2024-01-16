@@ -457,11 +457,6 @@ def setup_wgt_objects_and_collection(wgts_col_name, category_names):
 
         move_to_collection(cursor_mesh_obj, wgts_col)
 
-    # Remove old cursors using the mesh.
-    objs_to_remove = [ob for ob in bpy.data.objects if ob.name.startswith("Selector Icon")]
-    for ob in objs_to_remove:
-        bpy.data.objects.remove(ob)
-
     # Create text widgets for each SK category.
     text_objects = []
     for sk_category_name in category_names:
@@ -504,6 +499,30 @@ def create_category_text_custom_shape_obj(wgts_col, sk_category_name):
     move_to_collection(text_obj, wgts_col)
 
     return text_obj
+
+
+def remove_sks_objects(category_names):
+
+    # Remove old cursors using the cursor meshes.
+    objs_to_remove = [ob for ob in bpy.data.objects if ob.name.startswith("Selector Icon")]
+    for ob in objs_to_remove:
+        bpy.data.objects.remove(ob)
+
+    # Remove text objects for the category labels.
+    # Look for Text (font) datablocks, with the text content of a SK category
+    # that is being converted. Check for naming convention as additional security.
+    text_datablocks = [t for t in bpy.data.curves \
+        if type(t) == bpy.types.TextCurve and \
+            t.name.startswith('Text') and \
+            t.body in category_names]
+    for t in text_datablocks:
+        bpy.data.curves.remove(t, do_unlink=True)  # Will delete the linked object.
+
+    # Check for empty collections to remove.
+    empty_collections = [c for c in bpy.data.collections if len(c.all_objects) == 0]
+    for col in empty_collections:
+        if "Selectors" in col.name:
+            bpy.data.collections.remove(col)
 
 
 class SCENE_OT_convert_sks_to_skw(Operator):
@@ -693,8 +712,7 @@ class SCENE_OT_convert_sks_to_skw(Operator):
             setup_bones_movement(rig, sk_category_name, shape_key_base_names, has_lr_keys)
             setup_sk_value_drivers(self.geo_name, rig, sk_category_name, shape_key_base_names, has_lr_keys)
 
-        # TODO Cleanup SKS objects.
-        # find collection, if only empty text objects and no thumbnails, delete it.
+        remove_sks_objects(category_names)
 
         log.info("Done")
         return {'FINISHED'}
