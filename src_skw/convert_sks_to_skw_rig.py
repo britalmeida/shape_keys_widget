@@ -17,10 +17,11 @@ log = logging.getLogger(__package__)
 # - Shape keys called 'Eyes - Neutral', 'Eyes - Bla bla'
 # - Bone called 'SKS-eyes', in the desired position
 # - Objects with a picture called 'Eyes - Neutral', 'Eyes - Bla bla',
-#### Future: just the image files for 'Eyes - Neutral', 'Eyes - Bla bla'.
+# Future: just the image files for 'Eyes - Neutral', 'Eyes - Bla bla'.
 # - Collection for thumbnails e.g.: 'rig-thumbnails'
 # - Collection for rig widgets e.g.: 'rig-WGT'
 # - The rig widget mesh objects
+
 
 # --- Naming conventions ---
 # This is what gets generated for the Blender bones and objects as seen in the outliner.
@@ -29,23 +30,30 @@ log = logging.getLogger(__package__)
 def get_sk_category_base_bone_name(sk_category_name):
     return f"SKS-{slugify_name(sk_category_name)}"
 
+
 def get_sk_category_cursor_bone_name(sk_category_name):
     return f"SKS-{slugify_name(sk_category_name)}-cursor"
+
 
 def get_sk_bone_name(sk_name):
     return f"SKS-{slugify_name(sk_name)}"
 
+
 def get_sk_thumb_obj_name(sk_name):
     return f"{sk_name}"
+
 
 def get_wgt_category_obj_name(sk_category_name):
     return f"WGT-sk-label-{slugify_name(sk_category_name)}"
 
+
 def get_wgt_cursor_obj_name():
     return "WGT-sk-cursor"
 
+
 def get_wgt_thumb_obj_name():
     return "WGT-thumbnail-selector"
+
 
 def slugify_name(name):
     name = name.replace(' ', '')
@@ -72,7 +80,7 @@ def nuke_existing_and_make_new_bone(edit_bones, bone_name):
     return edit_bones.new(bone_name)
 
 
-def lock_transform(ob, lock_also_x_and_y = False):
+def lock_transform(ob, lock_also_x_and_y=False):
     ob.lock_location[0] = lock_also_x_and_y
     ob.lock_location[1] = lock_also_x_and_y
     ob.lock_location[2] = True
@@ -110,10 +118,10 @@ def create_bones(rig, sk_category_name, shape_key_base_names, has_lr_keys):
         base_pos = base_bone.head
     else:
         # Bone does not exist. Get the location of the corresponding SKS text.
-        text_objects = [t for t in bpy.data.objects \
-            if t.type == 'FONT' and 
-            t.name == sk_category_name and \
-            t.data.body == sk_category_name]
+        text_objects = [t for t in bpy.data.objects
+                        if t.type == 'FONT' and
+                        t.name == sk_category_name and
+                        t.data.body == sk_category_name]
         # Pray we found exactly one object.
         if len(text_objects) == 1:
             text_data = text_objects[0].data
@@ -131,7 +139,7 @@ def create_bones(rig, sk_category_name, shape_key_base_names, has_lr_keys):
     # Create cursor bones.
     # (before the thumbnails so it looks nice in the outliner)
     for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
-        cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)+cursor_type
+        cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name) + cursor_type
         cursor_bone = nuke_existing_and_make_new_bone(edit_bones, cursor_bone_name)
         cursor_bone.use_deform = False
         cursor_bone.parent = base_bone
@@ -168,7 +176,7 @@ def add_bone_custom_properties(rig, sk_category_name, shape_key_base_names, has_
 
     for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
         # Add cursor custom property 'snapping'.
-        cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)+cursor_type
+        cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name) + cursor_type
         cursor_bone = pose_bones.get(cursor_bone_name)
         cursor_bone["snapping"] = True
         id_props = cursor_bone.id_properties_ui("snapping")
@@ -178,13 +186,13 @@ def add_bone_custom_properties(rig, sk_category_name, shape_key_base_names, has_
         for sk_name in shape_key_base_names:
             bone_name = get_sk_bone_name(sk_name)
             bone = pose_bones.get(bone_name)
-            bone["cursor_influence"+cursor_type] = 0.0
-            id_props = bone.id_properties_ui("cursor_influence"+cursor_type)
+            bone["cursor_influence" + cursor_type] = 0.0
+            id_props = bone.id_properties_ui("cursor_influence" + cursor_type)
             id_props.update(subtype='FACTOR', min=0.0, max=1.0)
 
 
 def setup_thumbnails(thumbs_col_name, rig, shape_key_base_names):
-    # Find the thumbnails collection.
+    # Find the thumbnails' collection.
     thumbs_col = bpy.data.collections.get(thumbs_col_name)
 
     # The thumbnails should not be selectable or end up in final renders.
@@ -217,7 +225,7 @@ def setup_thumbnails(thumbs_col_name, rig, shape_key_base_names):
 
         # Parent the thumbnail objects to the bone.
         # Use an armature constraint to prevent unreliable transform results from reparenting.
-        # This way, there is no invisble offset to the parent, and it also makes a cleaner outliner.
+        # This way, there is no invisible offset to the parent, and it also makes a cleaner outliner.
         con = thumb_obj.constraints.new(type='ARMATURE')
         con_target = con.targets.new()
         con_target.target = rig
@@ -246,10 +254,10 @@ def setup_bone_custom_shapes(rig, sk_category_name, shape_key_base_names, has_lr
 
     # Cursor custom shape.
     for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
-        cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)+cursor_type
+        cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name) + cursor_type
         cursor_bone = pose_bones.get(cursor_bone_name)
 
-        cursor_mesh_name = get_wgt_cursor_obj_name()+cursor_type
+        cursor_mesh_name = get_wgt_cursor_obj_name() + cursor_type
         cursor_mesh_obj = bpy.data.objects.get(cursor_mesh_name)
         cursor_bone.custom_shape = cursor_mesh_obj
         cursor_bone.use_custom_shape_bone_size = False
@@ -279,7 +287,7 @@ def setup_bones_movement(rig, sk_category_name, shape_key_base_names, has_lr_key
 
     # Cursor
     for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
-        cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name)+cursor_type
+        cursor_bone_name = get_sk_category_cursor_bone_name(sk_category_name) + cursor_type
         cursor_bone = pose_bones.get(cursor_bone_name)
 
         lock_transform(cursor_bone, lock_also_x_and_y=False)
@@ -409,8 +417,8 @@ def setup_sk_value_drivers(mesh_name, rig, sk_category_name, shape_key_base_name
         for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
             add_cursor_influence_driver(
                 rig, bone,
-                "cursor_influence"+cursor_type,
-                cursor_bone_name+cursor_type)
+                "cursor_influence" + cursor_type,
+                cursor_bone_name + cursor_type)
 
     # Setup driver for the SK value from the cursor influence.
     shape_keys = bpy.data.objects[mesh_name].data.shape_keys.key_blocks
@@ -425,10 +433,10 @@ def setup_sk_value_drivers(mesh_name, rig, sk_category_name, shape_key_base_name
             continue
 
         for cursor_type in ['.L', '.R'] if has_lr_keys else ['']:
-            sk = shape_keys[sk_base_name+cursor_type]
+            sk = shape_keys[sk_base_name + cursor_type]
             add_shape_key_value_driver(
                 rig, sk,
-                thumbnail_bone_name, "cursor_influence"+cursor_type)
+                thumbnail_bone_name, "cursor_influence" + cursor_type)
 
 
 def move_bones_to_layer(rig):
@@ -442,7 +450,7 @@ def move_bones_to_layer(rig):
 
 
 def find_layer_collection(layer_col, col_name):
-    if (layer_col.name == col_name):
+    if layer_col.name == col_name:
         return layer_col
 
     for lc in layer_col.children:
@@ -450,8 +458,9 @@ def find_layer_collection(layer_col, col_name):
         if found_lc:
             return found_lc
 
+
 def layer_collection_set_exclude_from_view_layer(layer_col, col_name, exclude_value):
-    if (layer_col.name == col_name):
+    if layer_col.name == col_name:
         layer_col.exclude = exclude_value
         return True
 
@@ -470,7 +479,6 @@ def setup_wgt_objects_and_collection(wgts_col_name, category_names):
     wgts_col.hide_render = False
     wgts_col.hide_viewport = False
     # Find the Collection Layer that wgts_col Collection is in.
-    layer_col = None
     user_preferred_active_collection = bpy.context.view_layer.active_layer_collection
     layer_col = find_layer_collection(bpy.context.view_layer.layer_collection, wgts_col_name)
     # Ensure the collection is part of the view layer and save the previous state to restore later.
@@ -478,8 +486,8 @@ def setup_wgt_objects_and_collection(wgts_col_name, category_names):
     layer_col.exclude = False
     # Setup custom mesh to be shared for the cursor(s).
     for cursor_type in ["", ".L", ".R"]:
-        cursor_mesh_data_name = "Selector Icon"+cursor_type
-        cursor_mesh_obj_name = get_wgt_cursor_obj_name()+cursor_type
+        cursor_mesh_data_name = "Selector Icon" + cursor_type
+        cursor_mesh_obj_name = get_wgt_cursor_obj_name() + cursor_type
         cursor_mesh_data = bpy.data.meshes.get(cursor_mesh_data_name)
         cursor_mesh_obj = bpy.data.objects.get(cursor_mesh_obj_name)
 
@@ -494,14 +502,14 @@ def setup_wgt_objects_and_collection(wgts_col_name, category_names):
         text_obj = create_category_text_custom_shape_obj(wgts_col, sk_category_name)
         text_objects.append(text_obj)
 
-    # Convert the font into a 3D curve so it doesn't look tesselated in wireframe mode.
+    # Convert the font into a 3D curve so it doesn't look tessellated in wireframe mode.
     # The convert operator needs an active object and also the active objects to have their
     # select flag on. See issue #93188
     bpy.context.view_layer.update()
     with bpy.context.temp_override(
-        active_object=text_objects[0],
-        # selected_objects=text_objects
-        ):
+            active_object=text_objects[0],
+            # selected_objects=text_objects
+    ):
         for ob in bpy.context.selected_objects:
             ob.select_set(False)
         for ob in text_objects:
@@ -549,10 +557,10 @@ def remove_sks_objects(category_names):
     # Remove text objects for the category labels.
     # Look for Text (font) datablocks, with the text content of a SK category
     # that is being converted. Check for naming convention as additional security.
-    text_datablocks = [t for t in bpy.data.curves \
-        if type(t) == bpy.types.TextCurve and \
-            t.name.startswith('Text') and \
-            t.body in category_names]
+    text_datablocks = [t for t in bpy.data.curves
+                       if isinstance(t, bpy.types.TextCurve) and
+                       t.name.startswith('Text') and
+                       t.body in category_names]
     for t in text_datablocks:
         bpy.data.curves.remove(t, do_unlink=True)  # Will delete the linked object.
 
@@ -569,7 +577,6 @@ class SCENE_OT_convert_sks_to_skw(Operator):
     bl_description = """
         Migrate data on a file that was setup with the Shape Key Selector V1 addon to a rig"""
     bl_options = {'UNDO', 'REGISTER'}
-
 
     rig_name: StringProperty(
         name="Rig Name",
@@ -602,9 +609,9 @@ class SCENE_OT_convert_sks_to_skw(Operator):
         wgts_col = bpy.data.collections.get(self.wgts_collection_name)
         if not wgts_col:
             self.report({'ERROR'},
-                f"Missing collection named '{self.wgts_collection_name}'\n"
-                "Needed to hold meshes for bone custom shapes.\n"
-                "It will be hidden in the viewport.")
+                        f"Missing collection named '{self.wgts_collection_name}'\n"
+                        "Needed to hold meshes for bone custom shapes.\n"
+                        "It will be hidden in the viewport.")
             return False
 
         # TODO: SKW should make the custom shape mesh data for the cursors and thumbnail moving.
@@ -615,22 +622,23 @@ class SCENE_OT_convert_sks_to_skw(Operator):
         thumb_selector_mesh_data = bpy.data.meshes.get(get_wgt_thumb_obj_name())
         if not cursor_mesh_data or not cursor_l_mesh_data or not cursor_r_mesh_data or not thumb_selector_mesh_data:
             self.report({'ERROR'},
-                "Missing custom mesh objects for bone custom shapes.\n"
-                f"Needs objects with a mesh called 'Selector Icon', 'Selector Icon.L', 'Selector Icon.R' and '{get_wgt_thumb_obj_name()}'")
+                        "Missing custom mesh objects for bone custom shapes.\n"
+                        "Needs objects with a mesh called 'Selector Icon', 'Selector Icon.L', "
+                        f"'Selector Icon.R' and '{get_wgt_thumb_obj_name()}'")
             return False
 
         thumbs_col = bpy.data.collections.get(self.thumbs_collection_name)
         if not thumbs_col:
             self.report({'ERROR'},
-                f"Missing collection named '{self.thumbs_collection_name}'\n"
-                "Needed to hold thumbnail mesh objects that are parented to the rig.\n"
-                "It will be shown in the viewport, but hidden in renders.")
+                        f"Missing collection named '{self.thumbs_collection_name}'\n"
+                        "Needed to hold thumbnail mesh objects that are parented to the rig.\n"
+                        "It will be shown in the viewport, but hidden in renders.")
             return False
 
         mesh_obj = bpy.data.objects[self.geo_name]
         if not mesh_obj:
             self.report({'ERROR'},
-                f"Model/character mesh named '{self.geo_name}' not found")
+                        f"Model/character mesh named '{self.geo_name}' not found")
             return False
 
         # Check for a match in SK and thumbnail objects for each SK in each category.
@@ -640,7 +648,7 @@ class SCENE_OT_convert_sks_to_skw(Operator):
 
             if not shape_key_names:
                 self.report({'ERROR'},
-                    f"Mesh does not have any Shape Keys for category '{sk_category_name}'")
+                            f"Mesh does not have any Shape Keys for category '{sk_category_name}'")
                 return False
 
             # Check for the 'Neutral' Shape Key.
@@ -650,37 +658,37 @@ class SCENE_OT_convert_sks_to_skw(Operator):
                 return False
 
             # Match L and R shapes if they exist.
-            left_sk_names = [sk for sk in shape_key_names if sk.endswith(".L")]
-            right_sk_names = [sk for sk in shape_key_names if sk.endswith(".R")]
+            l_sk_names = [sk for sk in shape_key_names if sk.endswith(".L")]
+            r_sk_names = [sk for sk in shape_key_names if sk.endswith(".R")]
             global_sk_names = [sk for sk in shape_key_names if not sk.endswith(".L") and not sk.endswith(".R")]
-            has_lr_keys = (len(left_sk_names) > 0 or len(right_sk_names) > 0)
+            has_lr_keys = (len(l_sk_names) > 0 or len(r_sk_names) > 0)
 
             if has_lr_keys:
-                if len(left_sk_names) != len(right_sk_names) or len(global_sk_names) > 1:
+                if len(l_sk_names) != len(r_sk_names) or len(global_sk_names) > 1:
                     self.report({'ERROR'},
-                        f"Mesh has mismatched shape keys for '{sk_category_name}'\n"
-                        f"Category needs 1 'Neutral' and all others (or none) ending with '.L' and '.R'.\n"
-                        f"Found: {len(global_sk_names)} global, {len(left_sk_names)} .L, {len(right_sk_names)} .R")
+                                f"Mesh has mismatched shape keys for '{sk_category_name}'\n"
+                                f"Category needs 1 'Neutral' and all others (or none) ending with '.L' and '.R'.\n"
+                                f"Found: {len(global_sk_names)} global, {len(l_sk_names)} .L, {len(r_sk_names)} .R")
                     return False
 
-                for lname, rname in zip(left_sk_names, right_sk_names):
+                for lname, rname in zip(l_sk_names, r_sk_names):
                     if lname[:-2] != rname[:-2]:
                         self.report({'ERROR'},
-                            f"Mesh has mismatched shape keys for '{sk_category_name}'\n"
-                            f"Shapes ending with '.L' and '.R' need to match in name.\n"
-                            f"'{lname}' ≠ '{rname}'")
+                                    f"Mesh has mismatched shape keys for '{sk_category_name}'\n"
+                                    f"Shapes ending with '.L' and '.R' need to match in name.\n"
+                                    f"'{lname}' ≠ '{rname}'")
                         return False
 
             # Look for a thumbnail object matching each shape key (1 for each L/R pair).
             sk_base_names = global_sk_names
             if has_lr_keys:
-                sk_base_names += [sk[:-2] for sk in left_sk_names]
+                sk_base_names += [sk[:-2] for sk in l_sk_names]
 
             for sk_name in sk_base_names:
                 thumb_obj = bpy.data.objects.get(get_sk_thumb_obj_name(sk_name))
                 if not thumb_obj:
                     self.report({'ERROR'},
-                        f"File does not have an already existing thumbnail object called '{sk_name}'")
+                                f"File does not have an already existing thumbnail object called '{sk_name}'")
                     return False
 
         rig = bpy.data.objects.get(self.rig_name)
@@ -693,7 +701,7 @@ class SCENE_OT_convert_sks_to_skw(Operator):
         root_bone = armature.bones.get('root')
         if not root_bone:
             self.report({'ERROR'},
-                f"Rig does not have an already existing bone called 'root' to parent new bones to")
+                        f"Rig does not have an already existing bone called 'root' to parent new bones to")
             return False
 
         return True
@@ -734,7 +742,7 @@ class SCENE_OT_convert_sks_to_skw(Operator):
 
             # Gather the set of thumbnail and shape key names to configure the widget.
             shape_key_names = find_shape_keys(self.geo_name, sk_category_name)
-            left_sk_names = [sk for sk in shape_key_names if sk.endswith(".L")]
+            l_sk_names = [sk for sk in shape_key_names if sk.endswith(".L")]
             global_sk_names = [sk for sk in shape_key_names if not sk.endswith(".L") and not sk.endswith(".R")]
 
             # Prepare set of shape key names matching the thumbnails, by stripping '.L' endings
@@ -742,7 +750,7 @@ class SCENE_OT_convert_sks_to_skw(Operator):
             has_lr_keys = any(sk.endswith(".L") for sk in shape_key_names)
             shape_key_base_names = global_sk_names
             if has_lr_keys:
-                shape_key_base_names += [sk[:-2] for sk in left_sk_names]
+                shape_key_base_names += [sk[:-2] for sk in l_sk_names]
 
             log.info(f"... Creating '{sk_category_name}' widget with {shape_key_base_names} thumbnails.")
 
@@ -770,7 +778,6 @@ class SCENE_OT_convert_sks_to_skw(Operator):
 
         log.info("Done")
         return {'FINISHED'}
-
 
 
 # Add-on Registration #############################################################################

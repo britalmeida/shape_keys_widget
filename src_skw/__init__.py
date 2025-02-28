@@ -20,8 +20,8 @@ def register():
     ops.register()
     ui.register()
 
-def unregister():
 
+def unregister():
     ui.unregister()
     ops.unregister()
     data.unregister()
