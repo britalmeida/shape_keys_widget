@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2024 Shape Keys Widget Authors
+# SPDX-FileCopyrightText: 2024-2025 Shape Keys Widget Authors
 # SPDX-License-Identifier: GPL-3.0
 
 if "convert_sks_to_skw_rig" in locals():

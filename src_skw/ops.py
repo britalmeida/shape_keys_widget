@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2024 Shape Keys Widget Authors
+# SPDX-FileCopyrightText: 2024-2025 Shape Keys Widget Authors
 # SPDX-License-Identifier: GPL-3.0
 
 import logging
