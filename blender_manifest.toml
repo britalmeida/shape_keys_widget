@@ -1,0 +1,30 @@
+schema_version = "1.0.0"
+
+id = "shape_keys_widget"
+version = "0.2.0"
+type = "add-on"
+
+name = "Shape Keys Widget"
+tagline = "Visual UI for Shape Key selection in the 3D View"
+tags = ["Rigging"]
+
+license = ["SPDX:GPL-3.0-or-later"]
+
+blender_version_min = "3.6.0"
+
+maintainer = "Inês Almeida"
+website = "https://github.com/britalmeida/shape_keys_widget"
+
+
+[build]
+paths = [
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md",
+    "__init__.py",
+    "src_skw/__init__.py",
+    "src_skw/convert_sks_to_skw_rig.py",
+    "src_skw/data.py",
+    "src_skw/ops.py",
+    "src_skw/ui.py",
+]

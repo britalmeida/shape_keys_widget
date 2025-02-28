@@ -19,9 +19,22 @@ Based on "Shape Key Selector V1.0" by Vertex Arcade.
 
 ### Compatibility
 
-| Blender Version | Status |
-| - | - |
-| 4.0+ | Untested |
-| 3.6 LTS | Supported |
-| 3.3 LTS | Untested |
-| 2.93 LTS and older | Unsupported |
+| Blender Version   | Status      |
+|-------------------|-------------|
+| 4.3, 4.4, 4.5     | Supported   |
+| 4.2 LTS           | Supported   |
+| 3.6 LTS           | Supported   |
+| 3.3 LTS and older | Unsupported |
+
+
+## Development
+
+This add-on is Work In Progress.
+
+Currently, it has fully functional conversion from characters already setup with the
+"Shape Key Selector V1.0" addon to a regular rig which doesn't rely on any script.  
+This way, multiple characters can be added to the same shot, shape keys can be animated
+in pose mode along with the bones, files can be sent to render farms without scripts,
+and the "Shape Key Selector V1.0" add-on can be disabled to regain stability and performance.
+
+Next up, the plan is to make a workflow to create a rig setup from shape keys with new UI&UX.
