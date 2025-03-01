@@ -27,6 +27,10 @@ log = logging.getLogger(__package__)
 # This is what gets generated for the Blender bones and objects as seen in the outliner.
 # Change as desired for the result.
 
+def get_bone_collection_name():
+    return "Shake Key Widgets"
+
+
 def get_sk_category_base_bone_name(sk_category_name):
     return f"SKS-{slugify_name(sk_category_name)}"
 
@@ -62,6 +66,11 @@ def slugify_name(name):
 
 
 # --- Stuff ---
+
+# Blender 4.0 introduced bone collections to replace numbered armature layers.
+# This script needs to access one or the other depending on the Blender version.
+USE_BONE_COLLECTIONS = bpy.app.version[0] >= 4
+
 
 def find_shape_keys(mesh_name, category_name):
     shape_keys = bpy.data.objects[mesh_name].data.shape_keys.key_blocks
@@ -441,12 +450,25 @@ def setup_sk_value_drivers(mesh_name, rig, sk_category_name, shape_key_base_name
 
 def move_bones_to_layer(rig):
     bpy.ops.object.mode_set(mode='OBJECT')
+
+    bone_col = None
+    if USE_BONE_COLLECTIONS:
+        armature = rig.data
+        bone_col = armature.collections.get(get_bone_collection_name())
+        if not bone_col:
+            bone_col = armature.collections.new(get_bone_collection_name())
+
     for bone in rig.data.bones:
         if not bone.name.startswith('SKS-'):
             continue
-        for i in range(32):
-            rig.data.bones[bone.name].layers[i] = False
-        rig.data.bones[bone.name].layers[21] = True
+        # Assign the Shake Key bone to its own collection.
+        if USE_BONE_COLLECTIONS:
+            bone.collections.clear()
+            bone_col.assign(bone)
+        else:  # Move the bone from any layer it might have been in to layer 21.
+            for i in range(32):
+                rig.data.bones[bone.name].layers[i] = False
+            rig.data.bones[bone.name].layers[21] = True
 
 
 def find_layer_collection(layer_col, col_name):
