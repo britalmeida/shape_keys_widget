@@ -37,16 +37,27 @@ Not implemented yet. Very much planned!
 
 ## Installation
 
-1. Download this repository as ZIP file.
+
+### Installing as Extension
+
+Note: this add-on is available as an extension, but is not on [extensions.blender.org](https://extensions.blender.org) since it's very work-in-progress still.
+
+1. Download the [latest extension release from GitHub](https://github.com/britalmeida/push_to_talk/releases).
+2. `Drag&drop` the ZIP into Blender.
+
+### Installing as Legacy Add-on
+
+1. Download the latest extension release or the repository as ZIP file.
 2. In Blender's `Edit > Preferences > Add-ons`, click `Install` and select the ZIP.
 
 ### Updating
 
-1. Download the newest version ZIP.
-2. In Blender's `Edit > Preferences > Add-ons`, find this add-on, expand it, and click `Remove`.
-3. Click `Install` and select the ZIP.
+1. Remove a previous version if installed as an add-on:  
+   In Blender's `Edit > Preferences > Add-ons`, find this add-on, expand it, and click `Remove`.
+2. Download and install a new version as an extension.  
+   New versions of an extension can simply be installed on top without needing to manually delete the previous version.
+   This add-on is still provided as "Legacy Add-on" for versions of Blender 4.1 and older.
 
-**Alternatively:** this git repository can be **cloned** to a folder on disk and that folder linked to the `scripts/addons` folder of the Blender executable. This way, the add-on and be kept up to date with `git pull` without the need to remove/install it.
 
 ### Compatibility
 
