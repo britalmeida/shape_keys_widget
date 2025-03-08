@@ -13,7 +13,7 @@ from .. import ADDON_ID
 class VIEW3D_PT_shape_key_widgets_setup(Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Shape Key Widgets"
+    bl_category = "Shape Keys Widget"
     bl_label = "Setup"
     bl_description = """Configuration of thumbnails and categories should go here."""
 
@@ -28,7 +28,7 @@ class VIEW3D_PT_shape_key_widgets_setup(Panel):
 class VIEW3D_PT_shape_key_widgets_conversion(Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Shape Key Widgets"
+    bl_category = "Shape Keys Widget"
     bl_label = "Migration from SKS"
     bl_description = """Controls for converting an existing Shape Key Selector V1 setup to a rig"""
 

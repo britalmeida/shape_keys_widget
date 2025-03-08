@@ -16,7 +16,7 @@ and the "Shape Key Selector V1.0" add-on can be disabled to regain stability and
 
 ### Converting an existing setup with Shape Key Selector V1.0 to a rig
 
-In the `3D View` `Sidebar` (`N` key) shows a tab for `Shape Key Widgets`.  
+In the `3D View` `Sidebar` (`N` key) shows a tab for `Shape Keys Widget`.  
 Under `Migration from SKS` there is an operator with inputs for the names of an already existing character and shape keys.  
 The operator will try to find existing thumbnail, text and cursor objects to delete them and re-create them as bones in an existing rig for the character.  
 If the shape key widgets are the only rig wanted, create a new armature object with a single bone and parent the mesh to it.
