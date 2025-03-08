@@ -14,6 +14,13 @@ bl_info = {
     "category": "Rigging",
 }
 
+# ID that Blender uses to register the add-on preferences. Expected to be:
+# (legacy add-on) shape_keys_widget
+# (extension) bl_ext.blender_org.shape_keys_widget
+#             or instead of 'blender_org' a user/dev defined string.
+ADDON_ID = __package__
+
+
 import logging
 log = logging.getLogger(__name__)
 

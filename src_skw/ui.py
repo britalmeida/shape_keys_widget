@@ -8,6 +8,8 @@ import bpy
 from bpy.props import StringProperty
 from bpy.types import AddonPreferences, Panel
 
+from .. import ADDON_ID
+
 
 class VIEW3D_PT_shape_key_widgets_setup(Panel):
     bl_space_type = 'VIEW_3D'
@@ -35,7 +37,7 @@ class VIEW3D_PT_shape_key_widgets_conversion(Panel):
         layout = self.layout
         layout.use_property_split = True
 
-        addon_prefs = context.preferences.addons[__package__.split('.')[0]].preferences
+        addon_prefs = context.preferences.addons[ADDON_ID].preferences
         char_name = addon_prefs.character_name
 
         col = layout.column()
@@ -51,7 +53,7 @@ class VIEW3D_PT_shape_key_widgets_conversion(Panel):
 
 
 class VIEW3D_ShapeKeyWidgets_Preferences(AddonPreferences):
-    bl_idname = __package__.split('.')[0]
+    bl_idname = ADDON_ID
 
     character_name: StringProperty(
         name="Character Name",
