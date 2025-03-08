@@ -11,7 +11,7 @@ from bpy.types import AddonPreferences
 from .. import ADDON_ID
 
 
-class VIEW3D_ShapeKeyWidgets_Preferences(AddonPreferences):
+class VIEW3D_ShapeKeysWidget_Preferences(AddonPreferences):
     bl_idname = ADDON_ID
 
     character_name: StringProperty(
@@ -30,7 +30,7 @@ class VIEW3D_ShapeKeyWidgets_Preferences(AddonPreferences):
 # Add-on Registration #############################################################################
 
 classes = (
-    VIEW3D_ShapeKeyWidgets_Preferences,
+    VIEW3D_ShapeKeysWidget_Preferences,
 )
 
 
