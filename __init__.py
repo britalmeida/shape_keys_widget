@@ -19,17 +19,14 @@ log = logging.getLogger(__name__)
 
 if "src_skw" in locals():
     import importlib
-    #importlib.reload(main_script)
     importlib.reload(src_skw)
 else:
-    #from . import main_script
     from . import src_skw
 
 
 def register():
     log.info("------Registering Add-on---------------------------")
 
-    #main_script.register()
     src_skw.register()
 
     log.info("------Done Registering-----------------------------")
@@ -39,7 +36,6 @@ def unregister():
 
     log.info("------Unregistering Add-on-------------------------")
 
-    #main_script.unregister()
     src_skw.unregister()
 
     log.info("------Done Unregistering---------------------------")

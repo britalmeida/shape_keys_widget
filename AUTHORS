@@ -5,4 +5,9 @@
 # control.
 
 Inês Almeida
-Vertex Arcade
+
+# Shape Keys Widget was started as an alternative to "Shape Key Selector V1.0"
+# by Vertex Arcade after it turned into more than a little bit of adapting and
+# fixing the existing add-on. This project no longer has any code/content/docs
+# from "Shape Key Selector V1.0". It also departed from the original rigging and
+# animating workflow, but keeps the idea of visual thumbnails in the 3D View.
