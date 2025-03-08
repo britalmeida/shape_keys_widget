@@ -5,8 +5,7 @@ import logging
 log = logging.getLogger(__package__)
 
 import bpy
-from bpy.props import StringProperty
-from bpy.types import AddonPreferences, Panel
+from bpy.types import Panel
 
 from .. import ADDON_ID
 
@@ -52,26 +51,9 @@ class VIEW3D_PT_shape_key_widgets_conversion(Panel):
         op.categories_str = addon_prefs.categories_str
 
 
-class VIEW3D_ShapeKeyWidgets_Preferences(AddonPreferences):
-    bl_idname = ADDON_ID
-
-    character_name: StringProperty(
-        name="Character Name",
-        description="Existing rig where to add new bone controls for the shape keys",
-        default="claudia",
-    )
-
-    categories_str: StringProperty(
-        name="Shape Key Categories",
-        description="Comma separated list of Shape Key categories to generate controls for",
-        default="Mouth, Eyes",
-    )
-
-
 # Add-on Registration #############################################################################
 
 classes = (
-    VIEW3D_ShapeKeyWidgets_Preferences,
     VIEW3D_PT_shape_key_widgets_setup,
     VIEW3D_PT_shape_key_widgets_conversion,
 )

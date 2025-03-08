@@ -24,17 +24,17 @@ ADDON_ID = __package__
 import logging
 log = logging.getLogger(__name__)
 
-if "src_skw" in locals():
+if "src" in locals():
     import importlib
-    importlib.reload(src_skw)
+    importlib.reload(src)
 else:
-    from . import src_skw
+    from . import src
 
 
 def register():
     log.info("------Registering Add-on---------------------------")
 
-    src_skw.register()
+    src.register()
 
     log.info("------Done Registering-----------------------------")
 
@@ -43,7 +43,7 @@ def unregister():
 
     log.info("------Unregistering Add-on-------------------------")
 
-    src_skw.unregister()
+    src.unregister()
 
     log.info("------Done Unregistering---------------------------")
 
