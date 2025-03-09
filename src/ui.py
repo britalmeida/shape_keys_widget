@@ -51,11 +51,41 @@ class VIEW3D_PT_shape_key_widgets_conversion(Panel):
         op.categories_str = addon_prefs.categories_str
 
 
+class DATA_PT_ShapeKeysWidgetCategories(Panel):
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "data"
+    bl_order = 1  # It doesn't seem possible to place programmatically after 'Shape Keys'.
+    # Blender's mesh panels are on 0, Viewport Display: 10, Animation: 999, Custom Props: 1000.
+    bl_options = {'DEFAULT_CLOSED'}
+
+    bl_label = "Shape Keys Widget Categories"
+    bl_description = """Configuration of thumbnails and categories should go here."""
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        return obj and obj.type in {'MESH'}  # TODO: 'LATTICE', 'CURVE', 'SURFACE'
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+
+        # context.mesh
+        cat = context.scene.test_cat
+
+        col = layout.column()
+        col.label(text="WIP panel for SK category config")
+        col.prop(cat, "uuid")
+        col.prop(cat, "sk_cat_name")
+
+
 # Add-on Registration #############################################################################
 
 classes = (
     VIEW3D_PT_shape_key_widgets_setup,
     VIEW3D_PT_shape_key_widgets_conversion,
+    DATA_PT_ShapeKeysWidgetCategories,
 )
 
 
