@@ -6,6 +6,7 @@ log = logging.getLogger(__package__)
 
 import bpy
 from bpy.props import (
+    CollectionProperty,
     PointerProperty,
     StringProperty,
 )
@@ -25,7 +26,7 @@ class ShapeKeysWidgetCategory(PropertyGroup):
         description="Unique identifier for this category",
     )
     # PropertyGroup has 'name' already. Pick different to preserve options.
-    sk_cat_name: StringProperty(
+    skw_name: StringProperty(
         name="Name",
         description="Name to display in the UI",
         default="Category",
@@ -61,10 +62,10 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
-    bpy.types.Scene.test_cat = PointerProperty(
-        name="SK Category",
+    bpy.types.Mesh.shape_key_cats = CollectionProperty(
         type=ShapeKeysWidgetCategory,
-        description="Test Cat",
+        name="Shape Key Categories",
+        description="Arrangements of Shape Keys for rig widgets",
     )
 
 
@@ -72,3 +73,4 @@ def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
 
+    del bpy.types.Mesh.shape_key_cats

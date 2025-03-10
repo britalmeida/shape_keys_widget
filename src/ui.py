@@ -59,7 +59,7 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
     # Blender's mesh panels are on 0, Viewport Display: 10, Animation: 999, Custom Props: 1000.
     bl_options = {'DEFAULT_CLOSED'}
 
-    bl_label = "Shape Keys Widget Categories"
+    bl_label = "Shape Keys Widget"
     bl_description = """Configuration of thumbnails and categories should go here."""
 
     @classmethod
@@ -71,13 +71,59 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
         layout = self.layout
         layout.use_property_split = True
 
-        # context.mesh
-        cat = context.scene.test_cat
-
         col = layout.column()
-        col.label(text="WIP panel for SK category config")
-        col.prop(cat, "uuid")
-        col.prop(cat, "sk_cat_name")
+
+        # 'Add Category' button.
+        row = col.row()
+        row.operator("shape_keys_widget.add_shape_keys_widget_category")
+
+        # List of categories.
+        cats = context.mesh.shape_key_cats
+        for cat in cats:
+            col.separator()
+            box = col.box()
+            row = box.row()
+
+            # Color (empty space)
+            split = row.split(factor=0.1)
+            row = split.row(align=True)
+            row.alignment = 'LEFT'
+
+            # Icon
+            row = split.row(align=True)
+            split = row.split(factor=0.75)
+            row = split.row(align=False)
+            row.alignment = 'LEFT'
+            row.label(text="", icon='SHAPEKEY_DATA')
+
+            # Name
+            row.label(text=cat.skw_name)
+
+            # Edit button
+            row = split.row(align=True)
+            row.alignment = 'RIGHT'
+            edit_op = row.operator(
+                "shape_keys_widget.del_shape_keys_widget_category", text="", icon="GREASEPENCIL"
+            )
+            edit_op.cat_uuid = cat.uuid
+            #edit_op.skw_name = cat.skw_name
+
+            # Delete button
+            row.operator(
+                "shape_keys_widget.del_shape_keys_widget_category", text="", icon="X"
+            ).cat_uuid = cat.uuid
+
+            # Category Details
+            row = box.row()
+            split = row.split(factor=0.1)
+            row = split.row(align=True)
+            # Leave area under color empty, for alignment
+            row = split.row(align=True)
+            split = row.split(factor=1.0)
+            row = split.row(align=True)
+            row.alignment = 'LEFT'
+            row.label(text=cat.uuid)
+
 
 
 # Add-on Registration #############################################################################
