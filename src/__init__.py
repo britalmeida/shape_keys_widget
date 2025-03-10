@@ -7,11 +7,13 @@ if "convert_sks_to_skw_rig" in locals():
     importlib.reload(data)
     importlib.reload(ops)
     importlib.reload(ui)
+    importlib.reload(utils)
 else:
     from . import convert_sks_to_skw_rig
     from . import data
     from . import ops
     from . import ui
+    from . import utils
 
 
 def register():

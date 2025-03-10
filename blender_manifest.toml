@@ -27,4 +27,5 @@ paths = [
     "src/data.py",
     "src/ops.py",
     "src/ui.py",
+    "src/utils.py",
 ]
