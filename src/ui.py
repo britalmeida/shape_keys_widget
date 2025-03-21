@@ -144,22 +144,39 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
                 "shape_keys_widget.del_shape_key_from_category", icon='REMOVE', text=""
             ).cat_idx = i
 
+            but_col.separator()
+
+            move_up_op = but_col.operator(
+                "shape_keys_widget.move_shape_key_in_category", icon='TRIA_UP', text=""
+            )
+            move_up_op.direction = 'UP'
+            move_up_op.cat_idx = i
+
+            move_down_op = but_col.operator(
+                "shape_keys_widget.move_shape_key_in_category", icon='TRIA_DOWN', text=""
+            )
+            move_down_op.direction = 'DOWN'
+            move_down_op.cat_idx = i
+
             row = box.row()
             tex = bpy.data.textures["Eyes - Closed"]
             img = bpy.data.images["Eyes - Closed.png"]
             row.template_preview(tex)
 
             row = box.row()
+            row.use_property_decorate = False
+            row.prop(cat, "num_cols")
+            row = box.row()
             #row.prop_search(cat, "shape_key_name", cat, "shape_keys")
             #row.prop_search(cat, "shape_key_name", key, "key_blocks")
             # fmt: off
             row.use_property_decorate = False
             row.template_list(
-                "DATA_UL_shape_keys", "",  # Type and unique id.
-                context.mesh.shape_keys, "key_blocks",  # Pointer to the CollectionProperty.
-                context.object, "active_shape_key_index",  # Pointer to the active identifier.
+                "DATA_UL_CategoryShapeKeys", "",  # Type and unique id.
+                cat, "shape_keys",  # Pointer to the CollectionProperty.
+                cat, "active_sk_idx",  # Pointer to the active identifier.
                 rows=5,
-                type='GRID', columns=4,
+                type='GRID', columns=cat.num_cols,
             )
             # fmt: on
 

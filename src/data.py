@@ -68,6 +68,11 @@ class ShapeKeysWidgetCategory(PropertyGroup):
         default=0,
     )
     # TODO layout
+    num_cols: IntProperty(
+        name="Columns",
+        description="Number of columns to arrange the Shape Keys in",
+        default=5,
+    )
     # TODO camera setup
 
 

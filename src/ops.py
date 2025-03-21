@@ -188,7 +188,7 @@ class OperatorDelShapeKeyFromCategory(ShapeKeyWidgetsCategoryOperator):
         # Check that the Shape Key index to operate on is valid.
         # cats = context.mesh.shape_key_cats
         # cat = cats[cls.cat_idx]
-        # if not 0 <= cat.active_sk_idx < len(cats):
+        # if not 0 <= cat.active_sk_idx < len(cat.shape_keys):
         #     cls.poll_message_set("Widget category has no shape key selected")
         #     return False
 
@@ -217,6 +217,45 @@ class OperatorDelShapeKeyFromCategory(ShapeKeyWidgetsCategoryOperator):
         return {'FINISHED'}
 
 
+class OperatorMoveShapeKeyInCategory(ShapeKeyWidgetsCategoryOperator):
+    bl_idname = "shape_keys_widget.move_shape_key_in_category"
+    bl_label = "Move Shape Key in Widget Category"
+    bl_description = "Move the active Shape Key in the category arrangement"
+
+    direction: EnumProperty(
+        name="Move Direction",
+        description="Direction to move the active Shape Key: UP (default) or DOWN",
+        items=[
+            ('UP', "Up", "", -1),
+            ('DOWN', "Down", "", 1),
+        ],
+        default='UP',
+        options={'HIDDEN'},
+    )
+
+    def execute(self, context):
+        """Called to finish this operator's action"""
+
+        cats = context.mesh.shape_key_cats
+        cat = cats[self.cat_idx]
+
+        if not 0 <= cat.active_sk_idx < len(cat.shape_keys):
+            # TODO also poll if not len(cat.shape_keys) > 1
+            self.report({'ERROR'}, "Widget category has no shape key selected")
+            return False
+
+        active_idx = cat.active_sk_idx
+        new_idx = active_idx + (-1 if self.direction == 'UP' else 1)
+
+        if new_idx < 0 or new_idx >= len(cat.shape_keys):
+            return {'FINISHED'}
+
+        cat.shape_keys.move(active_idx, new_idx)
+        cat.active_sk_idx = new_idx
+
+        return {'FINISHED'}
+
+
 # Add-on Registration #############################################################################
 
 classes = (
@@ -224,6 +263,7 @@ classes = (
     OperatorDelShapeKeysWidgetCategory,
     OperatorAddShapeKeyToCategory,
     OperatorDelShapeKeyFromCategory,
+    OperatorMoveShapeKeyInCategory,
 )
 
 
