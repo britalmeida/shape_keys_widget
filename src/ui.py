@@ -6,6 +6,7 @@ log = logging.getLogger(__package__)
 
 import bpy
 from bpy.types import (
+    Menu,
     Panel,
     UIList,
 )
@@ -85,7 +86,14 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
         cats = context.mesh.shape_key_cats
         for i, cat in enumerate(cats):
 
-            header, body = col.panel(f"skw_cat_{cat.skw_name}", default_closed=False)
+            # Create context data so that buttons and operators can look up which
+            # category they operate on. This is needed for menus while ops can also uses props.
+            col.context_pointer_set("skw_category", cat)
+            # The ID is an arbitrary string, unique per panel instance for collapse state.
+            panel_id = f"skw_cat_{cat.skw_name}"
+
+            # Make a panel layout (collapsible header row + body col).
+            header, body = col.panel(panel_id, default_closed=False)
 
             def draw_cat_header():
                 row = header.row(align=True)
@@ -94,9 +102,7 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
                 row.prop(cat, "skw_name", text="")
 
                 # Edit button
-                edit_op = row.operator(
-                    "shape_keys_widget.del_shape_keys_widget_category", text="", icon="GREASEPENCIL"
-                ).cat_idx = i
+                row.menu("DATA_MT_CategoryMenu", text="", icon='DOWNARROW_HLT')
 
                 # Delete button
                 row.operator(
@@ -222,11 +228,28 @@ class DATA_UL_CategoryShapeKeys(UIList):
             col.template_icon(preview_idx, scale=2.5)
 
 
+class DATA_MT_CategoryMenu(Menu):
+    bl_label = "Shape Key Category Specials"
+
+    def draw(self, context):
+        layout = self.layout
+
+        # cat = context.skw_category
+
+        layout.operator("shape_keys_widget.mute_shape_keys_in_category", icon='CHECKBOX_DEHLT', text="Mute All").action = 'MUTE'
+        layout.operator("shape_keys_widget.mute_shape_keys_in_category", icon='CHECKBOX_HLT', text="Unmute All").action = 'UNMUTE'
+        # TODO lock and clear values for all sks in cat
+        # layout.separator()
+        # layout.operator("object.shape_key_lock", icon='LOCKED', text="Lock All").action = 'LOCK'
+        # layout.operator("object.shape_key_lock", icon='UNLOCKED', text="Unlock All").action = 'UNLOCK'
+
+
 # Add-on Registration #############################################################################
 
 classes = (
     VIEW3D_PT_shape_key_widgets_setup,
     VIEW3D_PT_shape_key_widgets_conversion,
+    DATA_MT_CategoryMenu,
     DATA_UL_CategoryShapeKeys,
     DATA_PT_ShapeKeysWidgetCategories,
 )

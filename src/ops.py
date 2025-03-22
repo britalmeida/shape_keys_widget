@@ -256,6 +256,61 @@ class OperatorMoveShapeKeyInCategory(ShapeKeyWidgetsCategoryOperator):
         return {'FINISHED'}
 
 
+class OperatorMuteShapeKeysInCategory(ShapeKeyWidgetsCategoryOperator):
+    bl_idname = "shape_keys_widget.mute_shape_keys_in_category"
+    bl_label = "Mute Shape Keys in Widget Category"
+    bl_description = "Mute all the Shape Keys in the category"
+
+    action: EnumProperty(
+        name="Action",
+        items=[
+            ('MUTE', "Mute", ""),
+            ('UNMUTE', "Unmute", ""),
+        ],
+        default='MUTE',
+        options={'HIDDEN'},
+    )
+
+    def execute(self, context):
+        """Called to finish this operator's action"""
+
+        cat = getattr(context, "skw_category", None)
+        if not cat:
+            self.report({'ERROR'}, "Missing widget category to operate on")
+            return False
+
+        shape_keys = context.mesh.shape_keys.key_blocks
+
+        make_mute = self.action == 'MUTE'
+
+        log.info(f"{'Muting' if make_mute else 'Unmuting'} all "
+                 f"{len(cat.shape_keys)} SKs from '{cat.skw_name}' category")
+
+        missing_sk_names = []
+
+        for skw_sk in cat.shape_keys:
+            try:
+                sk = shape_keys[skw_sk.shape_key_name]
+                sk.mute = make_mute
+            except KeyError:
+                missing_sk_names.append(skw_sk.shape_key_name)
+
+        if len(missing_sk_names) == 1:
+            self.report(
+                {'WARNING'},
+                f"Could not find shape key '{missing_sk_names[0].shape_key_name}' to "
+                f"{'mute' if make_mute else 'unmute'}"
+            )
+        elif len(missing_sk_names) > 1:
+            names_str = ', '.join(f"'{n}'" for n in missing_sk_names)
+            self.report(
+                {'WARNING'},
+                f"Operation failed for {len(missing_sk_names)} shape keys: {names_str}"
+            )
+
+        return {'FINISHED'}
+
+
 # Add-on Registration #############################################################################
 
 classes = (
@@ -264,6 +319,7 @@ classes = (
     OperatorAddShapeKeyToCategory,
     OperatorDelShapeKeyFromCategory,
     OperatorMoveShapeKeyInCategory,
+    OperatorMuteShapeKeysInCategory,
 )
 
 
