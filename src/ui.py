@@ -85,164 +85,153 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
         for i, cat in enumerate(cats):
             col.separator()
             box = col.box()
-            row = box.row()
 
-            # Color (empty space)
-            split = row.split(factor=0.1)
-            row = split.row(align=True)
-            row.alignment = 'LEFT'
+            def draw_cat_header():
+                row = box.row()
 
-            # Icon
-            row = split.row(align=True)
-            split = row.split(factor=0.75)
-            row = split.row(align=False)
-            row.alignment = 'LEFT'
-            row.label(text="", icon='SHAPEKEY_DATA')
+                # Color (empty space)
+                split = row.split(factor=0.1)
+                row = split.row(align=True)
+                row.alignment = 'LEFT'
 
-            # Name
-            row.label(text=cat.skw_name)
+                # Icon
+                row = split.row(align=True)
+                split = row.split(factor=0.75)
+                row = split.row(align=False)
+                row.alignment = 'LEFT'
+                row.label(text="", icon='SHAPEKEY_DATA')
 
-            # Edit button
-            row = split.row(align=True)
-            row.alignment = 'RIGHT'
-            edit_op = row.operator(
-                "shape_keys_widget.del_shape_keys_widget_category", text="", icon="GREASEPENCIL"
-            )
-            edit_op.cat_idx = i
-            #edit_op.skw_name = cat.skw_name
+                # Name
+                row.label(text=cat.skw_name)
 
-            # Delete button
-            row.operator(
-                "shape_keys_widget.del_shape_keys_widget_category", text="", icon="X"
-            ).cat_idx = i
+                # Edit button
+                row = split.row(align=True)
+                row.alignment = 'RIGHT'
+                edit_op = row.operator(
+                    "shape_keys_widget.del_shape_keys_widget_category", text="", icon="GREASEPENCIL"
+                )
+                edit_op.cat_idx = i
+                # edit_op.skw_name = cat.skw_name
+
+                # Delete button
+                row.operator(
+                    "shape_keys_widget.del_shape_keys_widget_category", text="", icon="X"
+                ).cat_idx = i
+            draw_cat_header()
 
             # Category Details
-            row = box.row()
-            split = row.split(factor=0.1)
-            row = split.row(align=True)
-            # Leave area under color empty, for alignment
-            row = split.row(align=True)
-            split = row.split(factor=1.0)
+            def draw_cat_properties():
+                row = box.row()
+                split = row.split(factor=0.1)
+                row = split.row(align=True)
+                # Leave area under color empty, for alignment
+                row = split.row(align=True)
+                split = row.split(factor=1.0)
+            draw_cat_properties()
 
-            row = box.row()
-            # UI list
-            num_rows = 5
-            # fmt: off
-            row.template_list(
-                "DATA_UL_CategoryShapeKeys", "",  # Type and unique id.
-                cat, "shape_keys",  # Pointer to the CollectionProperty.
-                cat, "active_sk_idx",  # Pointer to the active identifier.
-                rows=num_rows,
-            )
-            # fmt: on
-            # Buttons on the right
-            but_col = row.column(align=True)
-            add_op = but_col.operator(
-                "shape_keys_widget.add_shape_key_to_category", icon='ADD', text=""
-            ).cat_idx = i
-            del_op = but_col.operator(
-                "shape_keys_widget.del_shape_key_from_category", icon='REMOVE', text=""
-            ).cat_idx = i
+            def draw_cat_sks():
+                row = box.row()
+                # UI list
+                num_rows = 5
+                # fmt: off
+                row.template_list(
+                    "DATA_UL_CategoryShapeKeys", "",  # Type and unique id.
+                    cat, "shape_keys",  # Pointer to the CollectionProperty.
+                    cat, "active_sk_idx",  # Pointer to the active identifier.
+                    rows=num_rows,
+                    type='DEFAULT'
+                )
+                # fmt: on
 
-            but_col.separator()
+                # Buttons on the right
+                def draw_sk_op_buttons():
+                    but_col = row.column(align=True)
+                    add_op = but_col.operator(
+                        "shape_keys_widget.add_shape_key_to_category", icon='ADD', text=""
+                    ).cat_idx = i
+                    del_op = but_col.operator(
+                        "shape_keys_widget.del_shape_key_from_category", icon='REMOVE', text=""
+                    ).cat_idx = i
 
-            move_up_op = but_col.operator(
-                "shape_keys_widget.move_shape_key_in_category", icon='TRIA_UP', text=""
-            )
-            move_up_op.direction = 'UP'
-            move_up_op.cat_idx = i
+                    but_col.separator()
 
-            move_down_op = but_col.operator(
-                "shape_keys_widget.move_shape_key_in_category", icon='TRIA_DOWN', text=""
-            )
-            move_down_op.direction = 'DOWN'
-            move_down_op.cat_idx = i
+                    move_up_op = but_col.operator(
+                        "shape_keys_widget.move_shape_key_in_category", icon='TRIA_UP', text=""
+                    )
+                    move_up_op.direction = 'UP'
+                    move_up_op.cat_idx = i
 
-            row = box.row()
-            tex = bpy.data.textures["Eyes - Closed"]
-            img = bpy.data.images["Eyes - Closed.png"]
-            row.template_preview(tex)
+                    move_down_op = but_col.operator(
+                        "shape_keys_widget.move_shape_key_in_category", icon='TRIA_DOWN', text=""
+                    )
+                    move_down_op.direction = 'DOWN'
+                    move_down_op.cat_idx = i
+                draw_sk_op_buttons()
 
-            row = box.row()
-            row.use_property_decorate = False
-            row.prop(cat, "num_cols")
-            row = box.row()
-            #row.prop_search(cat, "shape_key_name", cat, "shape_keys")
-            #row.prop_search(cat, "shape_key_name", key, "key_blocks")
-            # fmt: off
-            row.use_property_decorate = False
-            row.template_list(
-                "DATA_UL_CategoryShapeKeys", "",  # Type and unique id.
-                cat, "shape_keys",  # Pointer to the CollectionProperty.
-                cat, "active_sk_idx",  # Pointer to the active identifier.
-                rows=5,
-                type='GRID', columns=cat.num_cols,
-            )
-            # fmt: on
+                row = box.row()
+                row.use_property_decorate = False
+                row.prop(cat, "num_cols")
+                row = box.row()
+                # row.prop_search(cat, "shape_key_name", cat, "shape_keys")
+                # row.prop_search(cat, "shape_key_name", key, "key_blocks")
+                # fmt: off
+                row.use_property_decorate = False
+                row.template_list(
+                    "DATA_UL_CategoryShapeKeys", "",  # Type and unique id.
+                    cat, "shape_keys",  # Pointer to the CollectionProperty.
+                    cat, "active_sk_idx",  # Pointer to the active identifier.
+                    rows=5,
+                    type='GRID', columns=cat.num_cols,
+                )
+                # fmt: on
+                draw_sk_op_buttons()
+            draw_cat_sks()
+
+            def draw_sk_properties():
+                row = box.row()
+
+                skw_sk = cat.shape_keys[cat.active_sk_idx]
+                img_name = f"{skw_sk.shape_key_name}.png"
+                preview_idx = 182  # hardcoded 'SHAPEKEY_DATA' icon fallback
+                if img_name in bpy.data.images:
+                    img = bpy.data.images[img_name]
+                    preview_idx = img.preview.icon_id
+                row.template_icon(preview_idx, scale=6.0)
+            draw_sk_properties()
 
 
 class DATA_UL_CategoryShapeKeys(UIList):
-    """UI List for the shape keys in a SKW category."""
+    """UI List for the shape keys in a SKW category"""
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_property,
                   index: int = 0, flt_flag: int = 0):
-        sk = item
+        skw_sk = item
+
+        img_name = f"{skw_sk.shape_key_name}.png"
+        preview_idx = 182  # hardcoded 'SHAPEKEY_DATA' icon fallback
+        if img_name in bpy.data.images:
+            img = bpy.data.images[img_name]
+            preview_idx = img.preview.icon_id
 
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
 
-            # split = layout.split(factor=0.12)
-            # row = split.row(align=True)
-            # row.alignment = 'LEFT'
-            # row.prop(sk, "color", text="", emboss=True)
-            #
-            # row = split.row(align=True)
+            split = layout.split(factor=0.12)
+            row = split.row(align=True)
+            row.alignment = 'LEFT'
+            #     tex_name = sk.shape_key_name
+            #     tex = bpy.data.textures[tex_name]
+            #     # row.template_preview(tex, preview_id="skw")
+            #     tex.preview_ensure()
+
+            row = split.row(align=True)
             # row.alignment = 'LEFT'
             # row.prop(sk, "name", text="", emboss=False)
 
-            layout.prop(sk, "shape_key_name", text="", emboss=False, icon_value=icon)
-
-
-class DATA_UL_shape_keys(UIList):
-    def draw_item(self, context, layout, data, item, icon, active_data, active_property,
-                  index: int = 0, flt_flag: int = 0):
-        obj = active_data
-        # key = data
-        key_block = item
-        if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            split = layout.split(factor=0.5, align=True)
-            split.prop(key_block, "name", text="", emboss=False, icon_value=icon)
-            row = split.row(align=True)
-            row.emboss = 'NONE_OR_STATUS'
-            row.alignment = 'RIGHT'
-            if key_block.mute or (obj.mode == 'EDIT' and not (obj.use_shape_key_edit_mode and obj.type == 'MESH')):
-                split.active = False
-            if not item.id_data.use_relative:
-                row.prop(key_block, "frame", text="")
-            elif index > 0:
-                row.prop(key_block, "value", text="")
-            else:
-                row.label(text="")
-            row.prop(key_block, "mute", text="", emboss=False)
-            row.prop(key_block, "lock_shape", text="", emboss=False)
-        elif self.layout_type == 'GRID':
-            layout.alignment = 'CENTER'
-            if key_block.name == "Basis":
-                layout.label(text="Basis", icon_value=icon)
-            else:
-                img_name = f"{key_block.name}.png"
-                tex_name = key_block.name
-                try:
-                    tex = bpy.data.textures[tex_name]
-                except KeyError:
-                    try:
-                        img = bpy.data.images[img_name]
-                        texture = bpy.data.textures.new(name=tex_name, type="IMAGE")
-                        texture.image = img
-                        texture.extension = 'CLIP'
-                        tex = texture
-                    except KeyError:
-                        tex = bpy.data.textures["Eyes - Closed"]
-                layout.template_preview(tex)
+            row.prop(skw_sk, "shape_key_name", text="", emboss=False, icon_value=preview_idx)
+        else:  # GRID
+            col = layout.column(align=True)
+            col.prop(skw_sk, "shape_key_name", text="", emboss=False)
+            col.template_icon(preview_idx, scale=2.5)
 
 
 # Add-on Registration #############################################################################
@@ -251,7 +240,6 @@ classes = (
     VIEW3D_PT_shape_key_widgets_setup,
     VIEW3D_PT_shape_key_widgets_conversion,
     DATA_UL_CategoryShapeKeys,
-    DATA_UL_shape_keys,
     DATA_PT_ShapeKeysWidgetCategories,
 )
 
