@@ -77,6 +77,13 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
 
         col = layout.column()
 
+        if context.mesh.shape_keys and not context.mesh.shape_keys.use_relative:
+            row = col.row()
+            row.label(text="Shape Keys need to be Relative", icon='ERROR')
+            col.separator()
+            col = col.column()
+            col.enabled = False
+
         # 'Add Category' button.
         row = col.row()
         row.operator("shape_keys_widget.add_shape_keys_widget_category")

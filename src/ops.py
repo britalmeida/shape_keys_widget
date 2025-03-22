@@ -51,6 +51,9 @@ class OperatorAddShapeKeysWidgetCategory(Operator):
         if not context.mesh:
             cls.poll_message_set("Operator only available in the Mesh tab of the Properties Editor")
             return False
+        if not context.mesh.shape_keys:
+            cls.poll_message_set("Mesh has no Shape Keys")
+            return False
         return True
 
     def execute(self, context):
