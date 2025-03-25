@@ -206,7 +206,11 @@ class DATA_UL_CategoryShapeKeys(UIList):
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_property,
                   index: int = 0, flt_flag: int = 0):
+        # cat = data
         skw_sk = item
+
+        sk_names_in_mesh = context.mesh.shape_keys.key_blocks.keys()
+        has_matching_sk = skw_sk.shape_key_name in sk_names_in_mesh
 
         img_name = f"{skw_sk.shape_key_name}.png"
         preview_idx = 182  # hardcoded 'SHAPEKEY_DATA' icon fallback
@@ -216,21 +220,17 @@ class DATA_UL_CategoryShapeKeys(UIList):
 
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
 
-            split = layout.split(factor=0.12)
-            row = split.row(align=True)
+            row = layout.row(align=True)
             row.alignment = 'LEFT'
-            #     tex_name = sk.shape_key_name
-            #     tex = bpy.data.textures[tex_name]
-            #     # row.template_preview(tex, preview_id="skw")
-            #     tex.preview_ensure()
+            row.alert = not has_matching_sk
 
-            row = split.row(align=True)
-            # row.alignment = 'LEFT'
-            # row.prop(sk, "name", text="", emboss=False)
+            row.template_icon(preview_idx)
+            row.prop(skw_sk, "shape_key_name", emboss=False, text="")
 
-            row.prop(skw_sk, "shape_key_name", text="", emboss=False, icon_value=preview_idx)
         else:  # GRID
             col = layout.column(align=True)
+            col.alert = not has_matching_sk
+
             col.prop(skw_sk, "shape_key_name", text="", emboss=False)
             col.template_icon(preview_idx, scale=2.5)
 
