@@ -12,6 +12,7 @@ from bpy.types import (
 )
 
 from .. import ADDON_ID
+from . import utils
 
 
 class VIEW3D_PT_shape_key_widgets_setup(Panel):
@@ -213,7 +214,8 @@ class DATA_UL_CategoryShapeKeys(UIList):
         has_matching_sk = skw_sk.shape_key_name in sk_names_in_mesh
 
         img_name = f"{skw_sk.shape_key_name}.png"
-        preview_idx = 182  # hardcoded 'SHAPEKEY_DATA' icon fallback
+        # Fallback icon if the image wasn't created yet.
+        preview_idx = utils.get_icon_value('SHAPEKEY_DATA')
         if img_name in bpy.data.images:
             img = bpy.data.images[img_name]
             preview_idx = img.preview.icon_id

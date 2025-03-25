@@ -4,6 +4,13 @@
 from bpy.types import UILayout
 
 
+def get_icon_value(icon_name: str) -> int:
+    """Return the int value of a Blender UI icon name"""
+
+    icon_enum = UILayout.bl_rna.functions["prop"].parameters["icon"].enum_items
+    return icon_enum.find(icon_name)
+
+
 def draw_stat_label(layout: UILayout, label: str, value: str) -> None:
     """Add a label-value pair to Blender's UI, aligned as a split property"""
 
