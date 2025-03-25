@@ -5,6 +5,7 @@ import uuid
 
 import bpy
 from bpy.props import (
+    CollectionProperty,
     EnumProperty,
     IntProperty,
     StringProperty,
@@ -15,9 +16,29 @@ from bpy.types import (
 )
 
 from . import utils
+from .data import ShapeKeysWidgetCategory
 
 import logging
 log = logging.getLogger(__package__)
+
+
+class CreateShapeKeyWidgetsCategoryMixin:
+    bl_options = {'UNDO', 'REGISTER'}
+
+    @classmethod
+    def poll(cls, context):
+        if not context.mesh:
+            cls.poll_message_set("Operator only available in the Mesh tab of the Properties Editor")
+            return False
+        if not context.mesh.shape_keys:
+            cls.poll_message_set("Mesh has no Shape Keys")
+            return False
+        return True
+
+    def invoke(self, context, event):
+        """Present dialog to configure the properties before running the operator"""
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
 
 
 class ShapeKeyWidgetsCategoryOperator(Operator):
@@ -40,35 +61,154 @@ class ShapeKeyWidgetsCategoryOperator(Operator):
         return True
 
 
-class OperatorAddShapeKeysWidgetCategory(Operator):
+def create_and_add_category(base_name: str, cats: CollectionProperty) -> ShapeKeysWidgetCategory:
+    """Create the new category with a unique name and ID in the given collection"""
+
+    new_cat = cats.add()
+    new_cat.uuid = uuid.uuid4().hex
+    # Generate a name unique for this mesh, ending in '.001' if necessary.
+    name = utils.create_unique_name(base_name, cats)
+    new_cat.name = name
+    new_cat.skw_name = name  # TODO don't have this duplicated.
+    return new_cat
+
+
+class OperatorAddShapeKeysWidgetCategory(Operator, CreateShapeKeyWidgetsCategoryMixin):
     bl_idname = "shape_keys_widget.add_shape_keys_widget_category"
     bl_label = "Add Shape Keys Widget Category"
     bl_description = "Create an arrangement of shape keys to show in the 3D View"
-    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+
+        # Create the new category with a unique ID.
+        cats = context.mesh.shape_key_cats
+        new_cat = create_and_add_category("Category", cats)
+
+        # Generate...
+        # TODO
+
+        return {'FINISHED'}
+
+
+class OperatorCreateCatFromNamingConvention(Operator, CreateShapeKeyWidgetsCategoryMixin):
+    bl_idname = "shape_keys_widget.create_category_from_naming_convention"
+    bl_label = "Create Category from Naming Convention"
+    bl_description = "Create SKW Category with shape keys matching an input string"
+
+    input_str: StringProperty(
+        name="Name to Match",
+        description="Partial match to the naming convention used in the Shape Keys",
+        default="Mouth -",
+    )
+
+    def execute(self, context):
+
+        # Create the new category with a unique ID based on the naming convention.
+        cats = context.mesh.shape_key_cats
+        new_cat = create_and_add_category(self.input_str, cats)
+
+        # Find SKs based on the input naming convention
+        shape_keys = context.object.data.shape_keys.key_blocks
+        matching_sk_names = [name for name in shape_keys.keys() if self.input_str in name]
+
+        # Add new shape keys to the widget.
+        for sk_name in matching_sk_names:
+            new_widget_key = new_cat.shape_keys.add()
+            new_widget_key.shape_key_name = sk_name
+
+        # Generate...
+        # TODO
+
+        return {'FINISHED'}
+
+
+def get_sks_used_as_relative_to(self, context, edit_text):
+    shape_keys = context.object.data.shape_keys.key_blocks
+
+    base_sk_names = set()
+    for sk in shape_keys:
+        base_sk_names.add(sk.relative_key.name)
+
+    return list(base_sk_names)
+
+class OperatorCreateCatFromRelativeShape(Operator, CreateShapeKeyWidgetsCategoryMixin):
+    bl_idname = "shape_keys_widget.create_category_from_relative_shape"
+    bl_label = "Create Category from Relative Shape"
+    bl_description = "Create SKW Category with shape keys having the same Relative To shape"
+
+    sk_name: StringProperty(
+        name="Relative To",
+        description="Name of the Shape Key that the keys to add are relative to",
+        default="",
+        search=get_sks_used_as_relative_to
+    )
+
+    def execute(self, context):
+
+        # Create the new category with a unique ID based on the naming convention.
+        cats = context.mesh.shape_key_cats
+        new_cat = create_and_add_category(self.sk_name, cats)
+
+        # Find SKs which are relative to the input SK.
+        shape_keys = context.object.data.shape_keys.key_blocks
+        matching_sks = [sk for sk in shape_keys.values() if sk.relative_key.name == self.sk_name]
+
+        # Add new shape keys to the widget.
+        for sk in matching_sks:
+            new_widget_key = new_cat.shape_keys.add()
+            new_widget_key.shape_key_name = sk.name
+
+        # Generate...
+        # TODO
+
+        return {'FINISHED'}
+
+
+def get_vertex_groups_used_by_sks(self, context, edit_text):
+    shape_keys = context.object.data.shape_keys.key_blocks
+
+    vtx_group_names = set()
+    for sk in shape_keys:
+        if sk.vertex_group:
+            vtx_group_names.add(sk.vertex_group)
+
+    return list(vtx_group_names)
+
+class OperatorCreateCatFromVertexGroup(Operator, CreateShapeKeyWidgetsCategoryMixin):
+    bl_idname = "shape_keys_widget.create_category_from_vertex_group"
+    bl_label = "Create Category from Vertex Group"
+    bl_description = "Create SKW Category with shape keys having the same Vertex Group"
+
+    vtx_group_name: StringProperty(
+        name="Vertex Group",
+        description="Name of the Shape Key that the keys to add are relative to",
+        default="",
+        search=get_vertex_groups_used_by_sks
+    )
 
     @classmethod
     def poll(cls, context):
-        if not context.mesh:
-            cls.poll_message_set("Operator only available in the Mesh tab of the Properties Editor")
+        if not CreateShapeKeyWidgetsCategoryMixin.poll(context):
             return False
-        if not context.mesh.shape_keys:
-            cls.poll_message_set("Mesh has no Shape Keys")
+        if not get_vertex_groups_used_by_sks({}, context, ""):
+            cls.poll_message_set("No Shape Keys of this Mesh use a Vertex Group")
             return False
         return True
 
     def execute(self, context):
-        """Called to finish this operator's action"""
 
+        # Create the new category with a unique ID based on the naming convention.
         cats = context.mesh.shape_key_cats
+        new_cat = create_and_add_category(self.vtx_group_name, cats)
 
-        # Create the new category with a unique ID.
-        new_cat = cats.add()
-        new_cat.uuid = uuid.uuid4().hex
-        # Generate a 'Object', 'Object.001' name unique for this mesh.
-        default_name = new_cat.skw_name
-        name = utils.create_unique_name(default_name, cats)
-        new_cat.name = name
-        new_cat.skw_name = name
+        # Find SKs which use the given Vertex Group.
+        shape_keys = context.object.data.shape_keys.key_blocks
+        matching_sks = [sk for sk in shape_keys.values() if sk.vertex_group == self.vtx_group_name]
+
+        # Add new shape keys to the widget.
+        for sk in matching_sks:
+            new_widget_key = new_cat.shape_keys.add()
+            new_widget_key.shape_key_name = sk.name
 
         # Generate...
         # TODO
@@ -318,6 +458,9 @@ class OperatorMuteShapeKeysInCategory(ShapeKeyWidgetsCategoryOperator):
 
 classes = (
     OperatorAddShapeKeysWidgetCategory,
+    OperatorCreateCatFromNamingConvention,
+    OperatorCreateCatFromRelativeShape,
+    OperatorCreateCatFromVertexGroup,
     OperatorDelShapeKeysWidgetCategory,
     OperatorAddShapeKeyToCategory,
     OperatorDelShapeKeyFromCategory,

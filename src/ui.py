@@ -75,9 +75,12 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
-
         col = layout.column()
 
+        # It could be that there are no SKs at all.
+        # With no SKs, some ops will be disabled, but not the entire UI.
+
+        # Hint the user if there are SKs, but they're not relative.
         if context.mesh.shape_keys and not context.mesh.shape_keys.use_relative:
             row = col.row()
             row.label(text="Shape Keys need to be Relative", icon='ERROR')
@@ -86,8 +89,9 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
             col.enabled = False
 
         # 'Add Category' button.
-        row = col.row()
+        row = col.row(align=True)
         row.operator("shape_keys_widget.add_shape_keys_widget_category")
+        row.menu("DATA_MT_AddCategoryMenu", text="", icon='DOWNARROW_HLT')
         col.separator()
 
         # List of categories.
@@ -109,7 +113,7 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
                 # Name
                 row.prop(cat, "skw_name", text="")
 
-                # Edit button
+                # Specials Menu
                 row.menu("DATA_MT_CategoryMenu", text="", icon='DOWNARROW_HLT')
 
                 # Delete button
@@ -237,6 +241,16 @@ class DATA_UL_CategoryShapeKeys(UIList):
             col.template_icon(preview_idx, scale=2.5)
 
 
+class DATA_MT_AddCategoryMenu(Menu):
+    bl_label = "Create Shape Key Categories"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator("shape_keys_widget.create_category_from_naming_convention")
+        layout.operator("shape_keys_widget.create_category_from_relative_shape")
+        layout.operator("shape_keys_widget.create_category_from_vertex_group")
+
+
 class DATA_MT_CategoryMenu(Menu):
     bl_label = "Shape Key Category Specials"
 
@@ -258,6 +272,7 @@ class DATA_MT_CategoryMenu(Menu):
 classes = (
     VIEW3D_PT_shape_key_widgets_setup,
     VIEW3D_PT_shape_key_widgets_conversion,
+    DATA_MT_AddCategoryMenu,
     DATA_MT_CategoryMenu,
     DATA_UL_CategoryShapeKeys,
     DATA_PT_ShapeKeysWidgetCategories,
