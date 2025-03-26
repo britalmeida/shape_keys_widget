@@ -325,9 +325,9 @@ class OperatorAddShapeKeyToCategory(ShapeKeyWidgetsCategoryOperator):
     def invoke(self, context, event):
         """Present dialog to configure the properties before running the operator"""
         wm = context.window_manager
-        return wm.invoke_props_popup(self, event)
+        # return wm.invoke_props_popup(self, event)
         # return wm.invoke_search_popup(self)
-        # return wm.invoke_props_dialog(self, width=200)
+        return wm.invoke_props_dialog(self, width=500)
         # return wm.invoke_popup(self)
 
     def execute(self, context):
@@ -341,6 +341,9 @@ class OperatorAddShapeKeyToCategory(ShapeKeyWidgetsCategoryOperator):
         # Add a new shape key to the widget.
         new_widget_key = cat.shape_keys.add()
         new_widget_key.shape_key_name = self.sk_name
+
+        # Select the new shape key in the UI.
+        cat.active_sk_idx = len(cat.shape_keys) - 1
 
         return {'FINISHED'}
 
