@@ -69,7 +69,7 @@ def create_and_add_category(base_name: str, cats: CollectionProperty) -> ShapeKe
     # Generate a name unique for this mesh, ending in '.001' if necessary.
     name = utils.create_unique_name(base_name, cats)
     new_cat.name = name
-    new_cat.skw_name = name  # TODO don't have this duplicated.
+    new_cat.widget_name = name  # TODO don't have this duplicated.
     return new_cat
 
 
@@ -226,7 +226,7 @@ class OperatorDelShapeKeysWidgetCategory(ShapeKeyWidgetsCategoryOperator):
 
         cats = context.mesh.shape_key_cats
         cat = cats[self.cat_idx]
-        log.debug(f"Deleting Category '{cat.skw_name}'")
+        log.debug(f"Deleting Category '{cat.widget_name}'")
 
         # TODO tear down widget from rig.
 
@@ -307,7 +307,7 @@ class OperatorAddShapeKeyToCategory(ShapeKeyWidgetsCategoryOperator):
         cats = context.mesh.shape_key_cats
         cat = cats[self.cat_idx]
 
-        log.info(f"Adding SK '{self.sk_name}' to '{cat.skw_name}' category")
+        log.info(f"Adding SK '{self.sk_name}' to '{cat.widget_name}' category")
 
         # Add a new shape key to the widget.
         new_widget_key = cat.shape_keys.add()
@@ -345,7 +345,7 @@ class OperatorDelShapeKeyFromCategory(ShapeKeyWidgetsCategoryOperator):
         sk_idx_to_remove = cat.active_sk_idx
         sk = cat.shape_keys[sk_idx_to_remove]
 
-        log.info(f"Removing SK '{sk.shape_key_name}' from '{cat.skw_name}' category")
+        log.info(f"Removing SK '{sk.shape_key_name}' from '{cat.widget_name}' category")
 
         # TODO tear down data.
 
@@ -427,7 +427,7 @@ class OperatorMuteShapeKeysInCategory(ShapeKeyWidgetsCategoryOperator):
         make_mute = self.action == 'MUTE'
 
         log.info(f"{'Muting' if make_mute else 'Unmuting'} all "
-                 f"{len(cat.shape_keys)} SKs from '{cat.skw_name}' category")
+                 f"{len(cat.shape_keys)} SKs from '{cat.widget_name}' category")
 
         missing_sk_names = []
 

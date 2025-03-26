@@ -102,7 +102,7 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
             # category they operate on. This is needed for menus while ops can also uses props.
             col.context_pointer_set("skw_category", cat)
             # The ID is an arbitrary string, unique per panel instance for collapse state.
-            panel_id = f"skw_cat_{cat.skw_name}"
+            panel_id = f"skw_cat_{cat.widget_name}"
 
             # Make a panel layout (collapsible header row + body col).
             header, body = col.panel(panel_id, default_closed=False)
@@ -111,7 +111,7 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
                 row = header.row(align=True)
 
                 # Name
-                row.prop(cat, "skw_name", text="")
+                row.prop(cat, "widget_name", text="")
 
                 # Specials Menu
                 row.menu("DATA_MT_CategoryMenu", text="", icon='DOWNARROW_HLT')

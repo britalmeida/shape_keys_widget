@@ -50,7 +50,7 @@ class ShapeKeysWidgetCategory(PropertyGroup):
         options={'HIDDEN'},
     )
     # PropertyGroup has 'name' already. Pick different to preserve options.
-    skw_name: StringProperty(
+    widget_name: StringProperty(
         name="Name",
         description="Name to display in the UI",
         default="Category",
