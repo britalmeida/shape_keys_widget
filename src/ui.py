@@ -65,7 +65,7 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
     bl_options = {'DEFAULT_CLOSED'}
 
     bl_label = "Shape Keys Widget"
-    bl_description = """Configuration of thumbnails and categories should go here."""
+    bl_description = """Configuration of Shape Key grouping and thumbnails for viewport widgets"""
 
     @classmethod
     def poll(cls, context):
@@ -79,9 +79,10 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
 
         # It could be that there are no SKs at all.
         # With no SKs, some ops will be disabled, but not the entire UI.
+        sks = context.mesh.shape_keys
 
         # Hint the user if there are SKs, but they're not relative.
-        if context.mesh.shape_keys and not context.mesh.shape_keys.use_relative:
+        if sks and not sks.use_relative:
             row = col.row()
             row.label(text="Shape Keys need to be Relative", icon='ERROR')
             col.separator()
@@ -123,20 +124,18 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
             draw_cat_header()
 
             if body:  # If it is unfolded, draw.
-                box = body.column()
+                col = body.column()
+                col.use_property_decorate = False
 
                 # Category Details
                 def draw_cat_properties():
-                    row = box.row()
-                    split = row.split(factor=0.1)
-                    row = split.row(align=True)
-                    # Leave area under color empty, for alignment
-                    row = split.row(align=True)
-                    split = row.split(factor=1.0)
+                    col.prop(cat, "is_mirrored")
+                    if sks:
+                        col.prop_search(cat, "neutral_key_name", sks, "key_blocks", icon='SHAPEKEY_DATA')
                 draw_cat_properties()
 
                 def draw_cat_sks():
-                    row = box.row()
+                    row = col.row()
                     # UI list
                     num_rows = 5
                     # fmt: off
@@ -174,10 +173,10 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
                         move_down_op.cat_idx = i
                     draw_sk_op_buttons()
 
-                    row = box.row()
+                    row = col.row()
                     row.use_property_decorate = False
                     row.prop(cat, "num_cols")
-                    row = box.row()
+                    row = col.row()
                     # row.prop_search(cat, "shape_key_name", cat, "shape_keys")
                     # row.prop_search(cat, "shape_key_name", key, "key_blocks")
                     # fmt: off
@@ -194,7 +193,7 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
                 draw_cat_sks()
 
                 def draw_sk_properties():
-                    row = box.row()
+                    row = col.row()
 
                     skw_sk = cat.shape_keys[cat.active_sk_idx]
                     img_name = f"{skw_sk.shape_key_name}.png"
@@ -214,7 +213,9 @@ class DATA_UL_CategoryShapeKeys(UIList):
         # cat = data
         skw_sk = item
 
-        sk_names_in_mesh = context.mesh.shape_keys.key_blocks.keys()
+        sk_names_in_mesh = []
+        if context.mesh.shape_keys:
+            sk_names_in_mesh = context.mesh.shape_keys.key_blocks.keys()
         has_matching_sk = skw_sk.shape_key_name in sk_names_in_mesh
 
         img_name = f"{skw_sk.shape_key_name}.png"

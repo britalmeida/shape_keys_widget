@@ -73,16 +73,32 @@ def create_and_add_category(base_name: str, cats: CollectionProperty) -> ShapeKe
     return new_cat
 
 
+def add_basis_as_neutral_shape(context: Context, new_cat: ShapeKeysWidgetCategory) -> None:
+    # Set the basis as "neutral" shape.
+    sks = context.mesh.shape_keys
+    basis_key_name = sks.key_blocks[0].name
+    new_cat.neutral_key_name = basis_key_name
+    # Add neutral shape to the shape keys collection.
+    new_widget_key = new_cat.shape_keys.add()
+    new_widget_key.shape_key_name = basis_key_name
+
+
 class OperatorAddShapeKeysWidgetCategory(Operator, CreateShapeKeyWidgetsCategoryMixin):
     bl_idname = "shape_keys_widget.add_shape_keys_widget_category"
     bl_label = "Add Shape Keys Widget Category"
     bl_description = "Create an arrangement of shape keys to show in the 3D View"
+
+    def invoke(self, context, event):
+        # Nothing to configure before running this operator.
+        return self.execute(context)
 
     def execute(self, context):
 
         # Create the new category with a unique ID.
         cats = context.mesh.shape_key_cats
         new_cat = create_and_add_category("Category", cats)
+
+        add_basis_as_neutral_shape(context, new_cat)
 
         # Generate...
         # TODO
@@ -106,6 +122,8 @@ class OperatorCreateCatFromNamingConvention(Operator, CreateShapeKeyWidgetsCateg
         # Create the new category with a unique ID based on the naming convention.
         cats = context.mesh.shape_key_cats
         new_cat = create_and_add_category(self.input_str, cats)
+
+        add_basis_as_neutral_shape(context, new_cat)
 
         # Find SKs based on the input naming convention
         shape_keys = context.object.data.shape_keys.key_blocks
@@ -149,9 +167,18 @@ class OperatorCreateCatFromRelativeShape(Operator, CreateShapeKeyWidgetsCategory
         cats = context.mesh.shape_key_cats
         new_cat = create_and_add_category(self.sk_name, cats)
 
+        sks = context.mesh.shape_keys.key_blocks
+        sk = sks[self.sk_name]
+
+        # Set the Relative To key as "neutral" shape.
+        new_cat.neutral_key_name = self.sk_name
+        # Add it to the widget, unless it is relative to itself, as then it will be added anyway.
+        if sk.relative_key != sk:
+            new_widget_key = new_cat.shape_keys.add()
+            new_widget_key.shape_key_name = self.sk_name
+
         # Find SKs which are relative to the input SK.
-        shape_keys = context.object.data.shape_keys.key_blocks
-        matching_sks = [sk for sk in shape_keys.values() if sk.relative_key.name == self.sk_name]
+        matching_sks = [sk for sk in sks.values() if sk.relative_key.name == self.sk_name]
 
         # Add new shape keys to the widget.
         for sk in matching_sks:
@@ -200,6 +227,8 @@ class OperatorCreateCatFromVertexGroup(Operator, CreateShapeKeyWidgetsCategoryMi
         # Create the new category with a unique ID based on the naming convention.
         cats = context.mesh.shape_key_cats
         new_cat = create_and_add_category(self.vtx_group_name, cats)
+
+        add_basis_as_neutral_shape(context, new_cat)
 
         # Find SKs which use the given Vertex Group.
         shape_keys = context.object.data.shape_keys.key_blocks

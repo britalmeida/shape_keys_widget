@@ -7,6 +7,7 @@ log = logging.getLogger(__package__)
 import bpy
 from bpy.app.handlers import persistent
 from bpy.props import (
+    BoolProperty,
     CollectionProperty,
     IntProperty,
     PointerProperty,
@@ -55,8 +56,18 @@ class ShapeKeysWidgetCategory(PropertyGroup):
         description="Name to display in the UI",
         default="Category",
     )
-    # TODO is_mirrored
-    # TODO basis, keys
+    is_mirrored: BoolProperty(
+        name="Mirrored",
+        description="If the widget should have separate left and right cursors. "
+                    "Shape Keys should then have .L and .R",
+        default=False,
+    )
+    neutral_key_name: StringProperty(
+        name="Neutral Key",
+        description="Key with no changes. Could be the Basis key or a key that "
+                    "the shapes in this category are Relative To",
+        default="Basis",
+    )
     shape_keys: CollectionProperty(
         type=ShapeKeysWidgetShapeKey,
         name="Shape Keys",
