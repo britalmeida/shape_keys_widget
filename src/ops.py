@@ -276,14 +276,21 @@ def get_all_sks_except_basis(self, context, edit_text):
 
 
 def get_sks_not_added_yet(self, context, edit_text):
-    sk_names = get_all_sks_except_basis(self, context, edit_text)
 
     cats = context.mesh.shape_key_cats
     cat = cats[self.cat_idx]
     shape_key_names_already_in_cat = [sk.shape_key_name for sk in cat.shape_keys]
 
-    return [sk for sk in sk_names if sk not in shape_key_names_already_in_cat]
+    # Get "unmirrored" names.
+    sk_names = get_all_sks_except_basis(self, context, edit_text)
+    if not cat.is_mirrored:
+        # Get only SK names that don't end in .L or .R.
+        sk_names = [sk for sk in sk_names if not (sk.endswith(".L") or sk.endswith(".R"))]
+    else:
+        # Get only SKs that end with .L or .R, but present them as a single name.
+        sk_names = [sk[:-2] for sk in sk_names if sk.endswith(".L")]
 
+    return [sk for sk in sk_names if sk not in shape_key_names_already_in_cat]
 
 def get_sks_as_enum_items(self, context):
     sk_names = get_sks_not_added_yet(self, context, "")
@@ -318,9 +325,32 @@ class OperatorAddShapeKeyToCategory(ShapeKeyWidgetsCategoryOperator):
     # items=get_sks_not_added_yet_as_enum_items
 
     def draw(self, context):
-        row = self.layout.row()
-        row.activate_init = True
-        row.prop(self, "sk_name", text='')
+        cats = context.mesh.shape_key_cats
+        cat = cats[self.cat_idx]
+
+        col = self.layout.column()
+        # Show possible problems with the SK authoring.
+        sk_names = bpy.context.object.data.shape_keys.key_blocks.keys()
+        l_sks = set([sk[:-2] for sk in sk_names if sk.endswith(".L")])
+        r_sks = set([sk[:-2] for sk in sk_names if sk.endswith(".R")])
+        if l_sks != r_sks:
+            l_only = l_sks - r_sks
+            r_only = r_sks - l_sks
+            col.label(text="Mismatched number of .L and .R Shape Keys", icon='ERROR')
+            if r_only:
+                nr_keys_str = f"{len(r_only)} Key{'s' if len(r_only) > 1 else ''}"
+                sk_names_str = ', '.join(f"'{n}'" for n in r_only)
+                col.label(text=f"{nr_keys_str} missing .L: {sk_names_str}")
+            if l_only:
+                nr_keys_str = f"{len(l_only)} Key{'s' if len(l_only) > 1 else ''}"
+                sk_names_str = ', '.join(f"'{n}'" for n in l_only)
+                col.label(text=f"{nr_keys_str} missing .R: {sk_names_str}")
+            col.separator()
+        # Show search field.
+        sk_type_str = "Mirrored" if cat.is_mirrored else "Unmirrored"
+        col.label(text=f"{sk_type_str} Shape Keys that were not added yet:")
+        col.activate_init = True
+        col.prop(self, "sk_name", text="")
 
     def invoke(self, context, event):
         """Present dialog to configure the properties before running the operator"""
