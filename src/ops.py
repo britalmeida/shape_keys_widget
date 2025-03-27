@@ -106,6 +106,31 @@ class OperatorAddShapeKeysWidgetCategory(Operator, CreateShapeKeyWidgetsCategory
         return {'FINISHED'}
 
 
+def add_sks_to_cat(cat: ShapeKeysWidgetCategory, sk_names: list[str]) -> None:
+
+    # Check if the keys are mirrored, so the category should be too.
+    # Note: maybe there's a mix either due to a faulty SK authoring or
+    # because the input str is too generic. The user will have to fix that manually.
+    num_mirrored_keys = len([sk for sk in sk_names if sk.endswith(".L") or sk.endswith(".R")])
+    cat.is_mirrored = num_mirrored_keys > len(sk_names) * 0.5
+
+    # Create a set of names not ending in .L or .R.
+    # For a SK LR pair, there will only be one name added.
+    # For a LR key without the pair, there will also be one name added.
+    # This happens regardless of if the category is marked as mirrored.
+    # Mistakes will be marked so the user can correct it.
+    sk_names_to_add = set()
+    for sk in sk_names:
+        if sk.endswith(".L") or sk.endswith(".R"):
+            sk_names_to_add.add(sk[:-2])
+        else:
+            sk_names_to_add.add(sk)
+
+    for sk_name in sk_names_to_add:
+        new_widget_key = cat.shape_keys.add()
+        new_widget_key.shape_key_name = sk_name
+
+
 class OperatorCreateCatFromNamingConvention(Operator, CreateShapeKeyWidgetsCategoryMixin):
     bl_idname = "shape_keys_widget.create_category_from_naming_convention"
     bl_label = "Create Category from Naming Convention"
@@ -130,9 +155,7 @@ class OperatorCreateCatFromNamingConvention(Operator, CreateShapeKeyWidgetsCateg
         matching_sk_names = [name for name in shape_keys.keys() if self.input_str in name]
 
         # Add new shape keys to the widget.
-        for sk_name in matching_sk_names:
-            new_widget_key = new_cat.shape_keys.add()
-            new_widget_key.shape_key_name = sk_name
+        add_sks_to_cat(new_cat, matching_sk_names)
 
         # Generate...
         # TODO
@@ -178,12 +201,10 @@ class OperatorCreateCatFromRelativeShape(Operator, CreateShapeKeyWidgetsCategory
             new_widget_key.shape_key_name = self.sk_name
 
         # Find SKs which are relative to the input SK.
-        matching_sks = [sk for sk in sks.values() if sk.relative_key.name == self.sk_name]
+        matching_sk_names = [sk.name for sk in sks.values() if sk.relative_key.name == self.sk_name]
 
         # Add new shape keys to the widget.
-        for sk in matching_sks:
-            new_widget_key = new_cat.shape_keys.add()
-            new_widget_key.shape_key_name = sk.name
+        add_sks_to_cat(new_cat, matching_sk_names)
 
         # Generate...
         # TODO
@@ -232,12 +253,10 @@ class OperatorCreateCatFromVertexGroup(Operator, CreateShapeKeyWidgetsCategoryMi
 
         # Find SKs which use the given Vertex Group.
         shape_keys = context.object.data.shape_keys.key_blocks
-        matching_sks = [sk for sk in shape_keys.values() if sk.vertex_group == self.vtx_group_name]
+        matching_sk_names = [sk.name for sk in shape_keys.values() if sk.vertex_group == self.vtx_group_name]
 
         # Add new shape keys to the widget.
-        for sk in matching_sks:
-            new_widget_key = new_cat.shape_keys.add()
-            new_widget_key.shape_key_name = sk.name
+        add_sks_to_cat(new_cat, matching_sk_names)
 
         # Generate...
         # TODO

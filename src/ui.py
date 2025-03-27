@@ -210,13 +210,16 @@ class DATA_UL_CategoryShapeKeys(UIList):
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_property,
                   index: int = 0, flt_flag: int = 0):
-        # cat = data
+        cat = data
         skw_sk = item
 
         sk_names_in_mesh = []
         if context.mesh.shape_keys:
             sk_names_in_mesh = context.mesh.shape_keys.key_blocks.keys()
-        has_matching_sk = skw_sk.shape_key_name in sk_names_in_mesh
+        if not cat.is_mirrored:
+            has_matching_sk = skw_sk.shape_key_name in sk_names_in_mesh
+        else:
+            has_matching_sk = skw_sk.shape_key_name+".L" in sk_names_in_mesh and skw_sk.shape_key_name+".R" in sk_names_in_mesh
 
         img_name = f"{skw_sk.shape_key_name}.png"
         # Fallback icon if the image wasn't created yet.
