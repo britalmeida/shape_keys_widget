@@ -140,7 +140,7 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
                     num_rows = 5
                     # fmt: off
                     row.template_list(
-                        "DATA_UL_CategoryShapeKeys", "",  # Type and unique id.
+                        "DATA_UL_CategoryShapeKeys", panel_id,  # Type and unique id.
                         cat, "shape_keys",  # Pointer to the CollectionProperty.
                         cat, "active_sk_idx",  # Pointer to the active identifier.
                         rows=num_rows,
@@ -182,7 +182,7 @@ class DATA_PT_ShapeKeysWidgetCategories(Panel):
                     # fmt: off
                     row.use_property_decorate = False
                     row.template_list(
-                        "DATA_UL_CategoryShapeKeys", "",  # Type and unique id.
+                        "DATA_UL_CategoryShapeKeys", panel_id,  # Type and unique id.
                         cat, "shape_keys",  # Pointer to the CollectionProperty.
                         cat, "active_sk_idx",  # Pointer to the active identifier.
                         rows=5,
@@ -228,7 +228,6 @@ class DATA_UL_CategoryShapeKeys(UIList):
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
 
             row = layout.row(align=True)
-            row.alignment = 'LEFT'
             row.alert = not has_matching_sk
 
             row.template_icon(preview_idx)
