@@ -42,7 +42,7 @@ Not implemented yet. Very much planned!
 
 Note: this add-on is available as an extension, but is not on [extensions.blender.org](https://extensions.blender.org) since it's very work-in-progress still.
 
-1. Download the [latest extension release from GitHub](https://github.com/britalmeida/push_to_talk/releases).
+1. Download the [latest extension release from GitHub](https://github.com/britalmeida/shape_keys_widget/releases/).
 2. `Drag&drop` the ZIP into Blender.
 
 ### Installing as Legacy Add-on
