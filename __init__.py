@@ -6,7 +6,7 @@ bl_info = {
     "description": "Visual UI for Shape Key selection in the 3D View",
     "author": "Inês Almeida",
     "warning": "WIP development, not released for general usage yet",
-    "version": (0, 2, 1),
+    "version": (0, 2, 2),
     "blender": (3, 6, 0),
     "location": "View3D > Properties > Shape Keys Widget",
     "doc_url": "https://github.com/britalmeida/shape_keys_widget",
